@@ -1,0 +1,251 @@
+---
+title: "HS project"
+subtitle: "Make metadata"
+author: "Audrey"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    code_folding: show
+    code_download: true
+    toc: true
+    toc_float: true
+    number_sections: false
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+<!-- Automatically computes and prints in the output the running time for any code chunk -->
+```{r, echo=FALSE}
+# https://github.com/rstudio/rmarkdown/issues/1453
+hooks = knitr::knit_hooks$get()
+hook_foldable = function(type) {
+  force(type)
+  function(x, options) {
+    res = hooks[[type]](x, options)
+    
+    if (isFALSE(options[[paste0("fold_", type)]])) return(res)
+    
+    paste0(
+      "<details><summary>", "show", "</summary>\n\n",
+      res,
+      "\n\n</details>"
+    )
+  }
+}
+knitr::knit_hooks$set(
+  output = hook_foldable("output"),
+  plot = hook_foldable("plot"),
+  time_it = local({
+    now = NULL
+    function(before, options) {
+      if (options$time_it) {
+        if (before) {
+          now <<- Sys.time()
+        } else {
+          res = difftime(Sys.time(), now, units = "secs")
+          paste("(Time to run :", round(res, digits = 2), "s)")
+        }
+      }
+    }
+  })
+)
+```
+
+<!-- Set default parameters for all chunks -->
+```{r, setup, include = FALSE}
+set.seed(1337L)
+knitr::opts_chunk$set(echo = TRUE, # display code
+                      # display chunk output
+                      message = FALSE,
+                      warning = FALSE,
+                      fold_output = FALSE, # usefull for sessionInfo()
+                      fold_plot = FALSE,
+                      
+                      # figure settings
+                      fig.align = 'center',
+                      fig.width = 20,
+                      fig.height = 15,
+                      
+                      # something about seed, chunk and Rmarkdown compilation
+                      # https://stackoverflow.com/questions/39417003/long-vectors-not-supported-yet-error-in-rmd-but-not-in-r-script
+                      # cache = TRUE,
+                      cache.lazy = FALSE, 
+                      
+                      # add runtime after chunk
+                      time_it = FALSE)
+```
+
+
+This file is used to generate :
+
+* **sample_info** : dataframe containing sample names, sample path, custom colors...
+* **color_markers** : named list to give custom colors to cell types
+* **cell_markers** : named list containing markers for each cell type
+
+```{r library}
+library(dplyr)
+library(patchwork)
+library(ggplot2)
+
+.libPaths()
+```
+
+
+# Preparation
+
+In this section, we set the global settings of the analysis. We will store data there :
+
+```{r out_dir}
+save_name = "hs_hd"
+out_dir = "."
+```
+
+# Sample info
+
+We create a dataframe containing everything except colors.
+
+```{r sample_info}
+sample_info = data.frame(
+  project_name = c("2021_31", "2021_36", "2021_41", "2022_03", "2022_14",
+                   "2022_01", "2022_02"),
+  sample_type = c(rep("HS", 5), rep("HD", 2)),
+  gender = c("M", "M", "M", "F", "F", "M", "F"),
+  color = NA,
+  stringsAsFactors = FALSE) %>%
+  dplyr::mutate(sample_type = factor(sample_type, levels = c("HS", "HD"))) %>%
+  dplyr::mutate(gender = factor(gender, levels = c("F", "M"))) %>%
+  dplyr::mutate(project_name = factor(project_name, levels = project_name)) %>%
+  dplyr::mutate(unique_id = data.table::rowid(sample_type)) %>%
+  dplyr::mutate(sample_identifier = paste0(sample_type, "_", unique_id)) %>%
+  dplyr::mutate(sample_identifier = factor(sample_identifier, levels = sample_identifier)) %>%
+  dplyr::select(project_name,  sample_type, sample_identifier, gender, color)
+
+sample_info
+```
+
+We add custom colors for each sample :
+
+```{r custom_palette}
+list_palette = list(
+  # patients
+  HS = colorRampPalette(c("coral", "coral4")),
+  HD = colorRampPalette(c("dodgerblue", "royalblue3")))
+
+for (sample_type in unique(sample_info$sample_type)) {
+  matching_dataset = (sample_info$sample_type == sample_type)
+  sample_info[matching_dataset, "color"] = list_palette[[sample_type]](sum(matching_dataset))
+}
+```
+
+
+We visualize the colors :
+
+```{r custom_palette_see, fig.width = 8, fig.height = 1}
+ggplot2::ggplot(sample_info) +
+  ggplot2::geom_label(aes(x = project_name, y = 0, label = project_name, fill = project_name)) +
+  ggplot2::geom_text(aes(x = project_name, y = 1, label = sample_identifier)) +
+  ggplot2::lims(y = c(-1, 2)) +
+  ggplot2::scale_fill_manual(values = sample_info$color, breaks = sample_info$project_name) +
+  ggplot2::theme_void() +
+  ggplot2::theme(legend.position = "none")
+```
+
+We save it :
+
+```{r save_sample_info}
+saveRDS(sample_info, file = paste0(out_dir, "/", save_name, "_sample_info.rds"))
+```
+
+
+# Cell types
+
+We define markers for each population of interest :
+
+```{r cell_markers, class.source = "fold-hide"}
+cell_markers = list(
+  "T_CD4" = c("CD3D", "CD3G", "CD3E", "CD52", "IL32",
+              "TRBC1", "CD4", "COTL1", "CD40LG", "GPR183", "TNFRSF1B", "FYB1", "LAT"),
+  "T_CD8" = c("CD3D", "CD3G", "CD3E", "CD52", "IL32",
+              "CTSW", "NCR3", "CD8A", "NKG7", "KLRC1", "TRGC2", "CCL5", "ZNF683"),
+  "mac_CPVL" = c("LST1", "AIF1", "CPVL", "C15orf48", "CD1A", "CD52", "CD1E"),
+  "mac_TREM2" = c("LST1", "AIF1", "C3", "OLFML3", "TREM2", "A2M",
+                  "MSR1", "FCGR3A", "VSIG4", "AP003481.1"),
+  "FC" = c("GATA3", "NFIB", "IRX2", "MCM5", "KRT28", "GINS2", "CDCA7", "DEGS1", "APPL1", "PCLAF"),
+  "CO" = c("KRT35", "KRT85", "MSX2", "HOXC13", "KRT32", "UNC5B", "LEF1", "LAMP5", "HES2",
+           "PRR9", "DSG4", "DAPL1", "HOXC13", "TLE4", "LY6G6F-LY6G6D"),
+  "ME" = c("BAMBI", "SLC7A8", "EDNRA", "ALDH1A3", "IGFBP2", "KRT25", "KITLG", "MSX2", "SLC6A15", "PRDM1"),
+  "IBL" = c("KRT16", "KRT6B", "KRT6C", "NDUFA4L2", "TM4SF1", "APOC1", "SLC1A6",
+            "CLCA2", "RHOV", "CBLN2", "HES4", "SMCO4", "MGST1", "LYPD3", "MGP"),
+  "IF" = c("GPX2", "IMPA2", "KRT15", "DST", "COL17A1", "MOXD1", "C19orf48", "CHD7", "TMEM45A",
+           "AQP3", "ALDH3A1", "AHNAK2", "CDH13", "LAMB3", "CAVIN1", "S100A8", "S100A9",
+           "CLCA2", "EHF", "CHCHD10", "CEBPD", "TP53AIP1"),
+  "mORS" = c("GPX2", "IMPA2", "DEFB1", "LY6D", "S100A8", "EHF", "PDZK1IP1", "CHCHD10", "S100A7",
+             "FGFBP1", "KRT6A", "S100A9", "LYPD3", "CRABP2"),
+  "HFSC_1" = c("DIO2", "TCEAL2", "SFRP1", "TNC", "WIF1", "FRZB", "LHX2", "SPRY1", "COL1A2",
+               "TGFB2", "LMCD1", "FGL2", "C2orf40", "TUBB2B", "NPPC", "THBS1", "CYP1B1"),
+  "HFSC_2" = c("DIO2", "TCEAL2", "SFRP1", "TNC", "WIF1", "FRZB", "LHX2", "SPRY1",
+               "BHLHE41", "LGR5", "RAMP1", "SULT1E1", "EPCAM", "TSPAN18",
+               "ADAMTS6", "SAMD11", "BNC2", "SKIL"),
+  "mela" = c("DCT", "KIT", "MLANA", "GPM6B", "EDNRB", "PMEL", "IGFBP7", "MITF", "ZEB2", "APOD"))
+
+lengths(cell_markers)
+```
+
+Here are custom colors for each cell type :
+
+```{r color_markers, fig.width = 8, fig.height = 0.8, class.source = "fold-hide"}
+color_markers = aquarius::c30_palette[c(1:length(cell_markers))]
+names(color_markers) = names(cell_markers)
+
+data.frame(cell_type = names(color_markers),
+           color = unlist(color_markers)) %>%
+  ggplot2::ggplot(., aes(x = cell_type, y = 0, fill = cell_type)) +
+  ggplot2::geom_point(pch = 21, size = 5) +
+  ggplot2::scale_fill_manual(values = unlist(color_markers), breaks = names(color_markers)) +
+  ggplot2::theme_classic() +
+  ggplot2::theme(legend.position = "none",
+                 axis.line = element_blank(),
+                 axis.title = element_blank(),
+                 axis.ticks = element_blank(),
+                 axis.text.y = element_blank(),
+                 axis.text.x = element_text(angle = 10))
+```
+
+These are some markers to assess cell type annotation :
+
+```{r dotplot_markers}
+dotplot_markers = list(
+  "T_CD4" = c("CD3E", "CD4"),
+  "T_CD8" = c("CD3E", "CD8A"),
+  "mac_CPVL" = c("AIF1", "CPVL"),
+  "mac_TREM2" = c("AIF1", "TREM2"),
+  "FC" = c("CD3E", "CD8A"),
+  "CO" = c("KRT35", "KRT85"),
+  "ME" = c("BAMBI", "SLC7A8"),
+  "IBL" = c("KRT16", "KRT6B"),
+  "IF" = c("AQP3", "S100A8"),
+  "mORS" = c("IMPA2", "KRT6A"),
+  "HFSC_1" = c("DIO2", "TGFB2"),
+  "HFSC_2" = c("DIO2", "BHLHE41"),
+  "mela" = c("DCT", "MLANA"))
+
+lengths(dotplot_markers)
+```
+
+We save them :
+
+```{r save_annotation}
+saveRDS(color_markers, file = paste0(out_dir, "/", save_name, "_color_markers.rds"))
+saveRDS(cell_markers, file = paste0(out_dir, "/", save_name, "_cell_markers.rds"))
+saveRDS(dotplot_markers, file = paste0(out_dir, "/", save_name, "_dotplot_markers.rds"))
+```
+
+
+# R Session
+
+```{r sessioninfo, echo = FALSE, fold_output = TRUE}
+sessionInfo()
+```

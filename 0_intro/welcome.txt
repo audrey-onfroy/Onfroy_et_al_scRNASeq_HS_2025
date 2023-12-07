@@ -1,0 +1,9 @@
+file="1_make_individual"
+for sample in $(ls /home/nf1/Documents/Audrey/git_hue/2_individual/input/); do
+	echo $sample
+	singularity exec --bind /home /home/nf1/Documents/Audrey/git_scripts/singularity/rpackages_dir/singularity_from_dir.simg \
+	Rscript -e "rmarkdown::render(input = '${file}.Rmd', output_file = '${sample}.html', params = list(sample_name = '${sample}'))"
+	done
+
+
+
