@@ -6,4 +6,4 @@ for sample in $(ls /home/nf1/Documents/Audrey/git_hue/2_individual/input/); do
 	done
 
 
-
+cd ../3_combined ; file="1_combined_all" ; singularity exec --bind /home /home/nf1/Documents/Audrey/git_scripts/singularity/rpackages_dir/singularity_from_dir.simg Rscript -e "rmarkdown::render(input = '${file}.Rmd', output_file = '${file}.html')"

@@ -171,9 +171,9 @@ These is a parameter for different functions :
 ```{r global_settings}
 cl = aquarius::create_parallel_instance(nthreads = 3L)
 cut_log_nCount_RNA = 6
-cut_nFeature_RNA = 600
+cut_nFeature_RNA = 500
 cut_percent.mt = 20
-cut_percent.rb = 30
+cut_percent.rb = 50
 ```
 
 # Load count matrix
