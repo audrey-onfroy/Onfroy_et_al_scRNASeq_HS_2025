@@ -166,30 +166,40 @@ We define markers for each population of interest :
 
 ```{r cell_markers, class.source = "fold-hide"}
 cell_markers = list(
-  "T_CD4" = c("CD3D", "CD3G", "CD3E", "CD52", "IL32",
-              "TRBC1", "CD4", "COTL1", "CD40LG", "GPR183", "TNFRSF1B", "FYB1", "LAT"),
-  "T_CD8" = c("CD3D", "CD3G", "CD3E", "CD52", "IL32",
-              "CTSW", "NCR3", "CD8A", "NKG7", "KLRC1", "TRGC2", "CCL5", "ZNF683"),
-  "mac_CPVL" = c("LST1", "AIF1", "CPVL", "C15orf48", "CD1A", "CD52", "CD1E"),
-  "mac_TREM2" = c("LST1", "AIF1", "C3", "OLFML3", "TREM2", "A2M",
-                  "MSR1", "FCGR3A", "VSIG4", "AP003481.1"),
-  "FC" = c("GATA3", "NFIB", "IRX2", "MCM5", "KRT28", "GINS2", "CDCA7", "DEGS1", "APPL1", "PCLAF"),
-  "CO" = c("KRT35", "KRT85", "MSX2", "HOXC13", "KRT32", "UNC5B", "LEF1", "LAMP5", "HES2",
-           "PRR9", "DSG4", "DAPL1", "HOXC13", "TLE4", "LY6G6F-LY6G6D"),
-  "ME" = c("BAMBI", "SLC7A8", "EDNRA", "ALDH1A3", "IGFBP2", "KRT25", "KITLG", "MSX2", "SLC6A15", "PRDM1"),
+  #  Immune cells
+  "CD4 T cells" = c("CD3D", "CD3G", "CD3E", "CD52", "IL32",
+                    "TRBC1", "CD4", "COTL1", "CD40LG", "GPR183", "TNFRSF1B", "FYB1", "LAT"),
+  "CD8 T cells" = c("CD3D", "CD3G", "CD3E", "CD52", "IL32",
+                    "CTSW", "NCR3", "CD8A", "NKG7", "KLRC1", "TRGC2", "CCL5", "ZNF683"),
+  "Langerhans cells" = c("CD207", "LST1", "AIF1", "CPVL", "C15orf48", "CD1A", "CD52", "CD1E", "CD1C"),
+  "macrophages" = c("LST1", "AIF1", "C3", "OLFML3", "TREM2", "A2M",
+                    "MSR1", "FCGR3A", "VSIG4", "AP003481.1"),
+  "B cells" = c("CD79A", "IGHG2", "IGHG3", "IGLC3", "IGHG1", "IGHM", "MS4A1", "IGLC2",
+                "IGHGP", "BANK1", "IGHG4", "IGKC", "TNFRSF13C", "CD79B", "KLF2", "GZMB"),
+  # Matrix
+  "cuticle" = c("KRT32", "KIF21A", "CCND2", "VCAN", "CYSTM1", "TESC", "MT4", "KRT35",
+                "DIAPH3", "VSNL1", "NOTCH1", "SNCAIP", "CADM1", "OCA2", "LAMP5"),
+  "cortex" = c("KRTAP11-1", "PRR9", "C10orf99", "CRYAB", "HEPHL1", "ALOX15B", "EFHD1", "KRT35",
+               "CALHM4", "SPECC1", "DSG4", "DNASE1L2", "TGM3", "KRT31", "KRT36", "KIAA1211L"),
+  "medulla" = c("BAMBI", "SLC7A8", "EDNRA", "ALDH1A3", "IGFBP2",
+                "KRT25", "KITLG", "MSX2", "SLC6A15", "PRDM1"),
+  "IRS" = c("KRT71", "KRT27", "KRT28", "KRT25", "CTSC", "GATA3", "KRT72", "KRT73", "KRT74",
+            "SCEL", "GFRA3", "POF1B", "RDH12", "LMO7", "TCHH", "FABP9"),
+  "proliferative" = c("NUSAP1", "PCLAF", "TOP2A", "MKI67", "BIRC5", "CENPF",
+                      "TK1", "CENPU", "TYMS", "MCM5", "GINS2", "MCM5", "PCLAF",
+                      "CDCA7", "MCM3", "TYMS", "CLSPN", "FEN1", "FAM111B", "CDT1"),
+  # Non-matrix
   "IBL" = c("KRT16", "KRT6B", "KRT6C", "NDUFA4L2", "TM4SF1", "APOC1", "SLC1A6",
             "CLCA2", "RHOV", "CBLN2", "HES4", "SMCO4", "MGST1", "LYPD3", "MGP"),
-  "IF" = c("GPX2", "IMPA2", "KRT15", "DST", "COL17A1", "MOXD1", "C19orf48", "CHD7", "TMEM45A",
-           "AQP3", "ALDH3A1", "AHNAK2", "CDH13", "LAMB3", "CAVIN1", "S100A8", "S100A9",
-           "CLCA2", "EHF", "CHCHD10", "CEBPD", "TP53AIP1"),
-  "mORS" = c("GPX2", "IMPA2", "DEFB1", "LY6D", "S100A8", "EHF", "PDZK1IP1", "CHCHD10", "S100A7",
-             "FGFBP1", "KRT6A", "S100A9", "LYPD3", "CRABP2"),
-  "HFSC_1" = c("DIO2", "TCEAL2", "SFRP1", "TNC", "WIF1", "FRZB", "LHX2", "SPRY1", "COL1A2",
-               "TGFB2", "LMCD1", "FGL2", "C2orf40", "TUBB2B", "NPPC", "THBS1", "CYP1B1"),
-  "HFSC_2" = c("DIO2", "TCEAL2", "SFRP1", "TNC", "WIF1", "FRZB", "LHX2", "SPRY1",
-               "BHLHE41", "LGR5", "RAMP1", "SULT1E1", "EPCAM", "TSPAN18",
-               "ADAMTS6", "SAMD11", "BNC2", "SKIL"),
-  "mela" = c("DCT", "KIT", "MLANA", "GPM6B", "EDNRB", "PMEL", "IGFBP7", "MITF", "ZEB2", "APOD"))
+  "ORS" = c("GPX2", "IMPA2", "KRT15", "DST", "COL17A1", "MOXD1", "C19orf48", "CHD7",
+            "ALDH3A1", "AHNAK2", "CDH13", "LAMB3", "CAVIN1", "EHF", "CEBPD", "TP53AIP1"),
+  "IFE" = c("GPX2", "IMPA2", "DEFB1", "LY6D", "EHF", "PDZK1IP1", "S100A7", "FGFBP1", "LYPD3",
+            "CRABP2", "SPINK5", "KRT1", "KRTDAP", "CIDEA", "SUSD4", "FAM83A", "TMEM45A"),
+  "HFSC" = c("KRT15", "DST", "DIO2", "TCEAL2", "SFRP1", "TNC", "WIF1", "FRZB", "LHX2", "SPRY1",
+             "COL1A2", "ITGA6", "SOX9", "S100A6", "ANGPTL7", "LGR5", "COL17A1"),
+  # other
+  "melanocytes" = c("DCT", "KIT", "MLANA", "GPM6B", "EDNRB", "PMEL", "IGFBP7", "MITF", "ZEB2", "APOD"),
+  "sebocytes" = c("CLMP", "GLDC", "PPARG", "ACSBG1", "MGST1", "SAA1", "AR", "APMAP"))
 
 lengths(cell_markers)
 ```
@@ -197,8 +207,22 @@ lengths(cell_markers)
 Here are custom colors for each cell type :
 
 ```{r color_markers, fig.width = 8, fig.height = 0.8, class.source = "fold-hide"}
-color_markers = aquarius::c30_palette[c(1:length(cell_markers))]
-names(color_markers) = names(cell_markers)
+color_markers = c("CD4 T cells" = "slateblue3",
+                  "CD8 T cells" = "mediumpurple1",
+                  "Langerhans cells" = "khaki3", 
+                  "macrophages" = "olivedrab",
+                  "B cells" = "aquamarine3",
+                  "cuticle" = "magenta4",
+                  "cortex" = "orchid1",
+                  "medulla" = "lightpink",
+                  "IRS" = "darkorange",
+                  "proliferative" = "dimgray",
+                  "IBL" = "chartreuse3",
+                  "ORS" = "cadetblue3",
+                  "IFE" = "royalblue3",
+                  "HFSC" = "firebrick3",
+                  "melanocytes" = "saddlebrown",
+                  "sebocytes" = "gold")
 
 data.frame(cell_type = names(color_markers),
            color = unlist(color_markers)) %>%
@@ -217,20 +241,22 @@ data.frame(cell_type = names(color_markers),
 These are some markers to assess cell type annotation :
 
 ```{r dotplot_markers}
-dotplot_markers = list(
-  "T_CD4" = c("CD3E", "CD4"),
-  "T_CD8" = c("CD3E", "CD8A"),
-  "mac_CPVL" = c("AIF1", "CPVL"),
-  "mac_TREM2" = c("AIF1", "TREM2"),
-  "FC" = c("CD3E", "CD8A"),
-  "CO" = c("KRT35", "KRT85"),
-  "ME" = c("BAMBI", "SLC7A8"),
-  "IBL" = c("KRT16", "KRT6B"),
-  "IF" = c("AQP3", "S100A8"),
-  "mORS" = c("IMPA2", "KRT6A"),
-  "HFSC_1" = c("DIO2", "TGFB2"),
-  "HFSC_2" = c("DIO2", "BHLHE41"),
-  "mela" = c("DCT", "MLANA"))
+dotplot_markers = list("CD4 T cells" = c("CD3E", "CD4"),
+                       "CD8 T cells" = c("CD3E", "CD8A"),
+                       "Langerhans cells" = c("CD207", "CPVL"),
+                       "macrophages" = c("TREM2", "MSR1"),
+                       "B cells" = c("CD79A", "CD79B"),
+                       "cuticle" = c("KRT32", "KRT35"),
+                       "cortex" = c("KRT31", "PRR9"),
+                       "medulla" = c("BAMBI", "ADLH1A3"),
+                       "IRS" = c("KRT71", "KRT73"),
+                       "proliferative" = c("TOP2A", "MCM5"),
+                       "IBL" = c("KRT16", "KRT6C"),
+                       "ORS" = c("KRT15", "GPX2"),
+                       "IFE" = c("SPINK5", "LY6D"),
+                       "HFSC" = c("DIO2", "TCEAL2"),
+                       "melanocytes" = c("DCT", "MLANA"),
+                       "sebocytes" = c("CLMP", "PPARG"))
 
 lengths(dotplot_markers)
 ```

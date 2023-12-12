@@ -135,7 +135,6 @@ We load the markers and specific colors for each cell type :
 
 ```{r cell_markers}
 cell_markers = readRDS(paste0(out_dir, "/../1_metadata/hs_hd_cell_markers.rds"))
-cell_markers = lapply(cell_markers, FUN = toupper)
 lengths(cell_markers)
 ```
 
@@ -143,7 +142,6 @@ We load markers to display on the dotplot :
 
 ```{r dotplot_markers}
 dotplot_markers = readRDS(paste0(out_dir, "/../1_metadata/hs_hd_dotplot_markers.rds"))
-dotplot_markers = lapply(dotplot_markers, FUN = toupper)
 dotplot_markers
 ```
 
@@ -260,7 +258,7 @@ plot_list = lapply(sobj_list, FUN = function(one_sobj) {
   
   # Score
   plot_sublist[[1]] = Seurat::FeaturePlot(one_sobj, reduction = name2D,
-                                          features = "score_mela") +
+                                          features = "score_melanocytes") +
     ggplot2::labs(title = project_name,
                   subtitle = "Melanocytes score") +
     Seurat::NoAxes() +
@@ -274,9 +272,9 @@ plot_list = lapply(sobj_list, FUN = function(one_sobj) {
                                       group.by = "cell_type",
                                       order = "melanocytes") +
     ggplot2::scale_color_manual(values = c("purple", rep("gray92", length(color_markers) - 1)),
-                                breaks = c("mela", setdiff(names(color_markers), "mela"))) +
+                                breaks = c("melanocytes", setdiff(names(color_markers), "melanocytes"))) +
     ggplot2::labs(title = "Cell type annotation",
-                  subtitle = paste0(sum(one_sobj$cell_type == "mela"),
+                  subtitle = paste0(sum(one_sobj$cell_type == "melanocytes"),
                                     " melanocytes")) +
     Seurat::NoAxes() + Seurat::NoLegend() +
     ggplot2::theme(aspect.ratio = 1,
@@ -299,9 +297,9 @@ plot_list = lapply(sobj_list, FUN = function(one_sobj) {
                                       reduction = name2D,
                                       group.by = "cluster_type") +
     ggplot2::scale_color_manual(values = c("purple", rep("gray92", length(color_markers) - 1)),
-                                breaks = c("mela", setdiff(names(color_markers), "mela"))) +
+                                breaks = c("melanocytes", setdiff(names(color_markers), "melanocytes"))) +
     ggplot2::labs(title = "Cluster annotation",
-                  subtitle = paste0(sum(one_sobj$cluster_type == "mela"),
+                  subtitle = paste0(sum(one_sobj$cluster_type == "melanocytes"),
                                     " melanocytes")) +
     Seurat::NoAxes() + Seurat::NoLegend() +
     ggplot2::theme(aspect.ratio = 1,
@@ -318,7 +316,7 @@ We remove melanocytes based on cluster annotation :
 
 ```{r remove_melanocytes}
 sobj_list = lapply(sobj_list, FUN = function(one_sobj) {
-  one_sobj$is_of_interest = (one_sobj$cluster_type != "mela")
+  one_sobj$is_of_interest = (one_sobj$cluster_type != "melanocytes")
   
   if (sum(one_sobj$is_of_interest) > 0) {
     one_sobj = subset(one_sobj, is_of_interest == TRUE)
@@ -340,9 +338,9 @@ lapply(sobj_list, FUN = dim) %>%
 We remove melanocytes from annotation :
 
 ```{r remove_from_annot}
-cell_markers = cell_markers[names(cell_markers) != "mela"]
-color_markers = color_markers[names(color_markers) != "mela"]
-dotplot_markers = dotplot_markers[names(dotplot_markers) != "mela"]
+cell_markers = cell_markers[names(cell_markers) != "melanocytes"]
+color_markers = color_markers[names(color_markers) != "melanocytes"]
+dotplot_markers = dotplot_markers[names(dotplot_markers) != "melanocytes"]
 ```
 
 We re-annote cells for cell type, since melanocytes have been removed :
@@ -625,7 +623,7 @@ We generate a clustering :
 
 ```{r clustering, fig.width = 6, fig.height = 6}
 sobj = Seurat::FindNeighbors(sobj, reduction = reduction, dims = 1:ndims)
-sobj = Seurat::FindClusters(sobj, resolution = 1)
+sobj = Seurat::FindClusters(sobj, resolution = 1.5)
 
 clusters_plot = Seurat::DimPlot(sobj, reduction = name2D, label = TRUE) +
   Seurat::NoAxes() + Seurat::NoLegend() +

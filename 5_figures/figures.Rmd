@@ -1,0 +1,577 @@
+---
+title: "HS project"
+subtitle: "Figures"
+author: "Audrey"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    code_folding: show
+    code_download: true
+    toc: true
+    toc_float: true
+    number_sections: false
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+<!-- Automatically computes and prints in the output the running time for any code chunk -->
+```{r, echo=FALSE}
+# https://github.com/rstudio/rmarkdown/issues/1453
+hooks = knitr::knit_hooks$get()
+hook_foldable = function(type) {
+  force(type)
+  function(x, options) {
+    res = hooks[[type]](x, options)
+    
+    if (isFALSE(options[[paste0("fold_", type)]])) return(res)
+    
+    paste0(
+      "<details><summary>", "show", "</summary>\n\n",
+      res,
+      "\n\n</details>"
+    )
+  }
+}
+knitr::knit_hooks$set(
+  output = hook_foldable("output"),
+  plot = hook_foldable("plot"),
+  time_it = local({
+    now = NULL
+    function(before, options) {
+      if (options$time_it) {
+        if (before) {
+          now <= Sys.time()
+        } else {
+          res = difftime(Sys.time(), now, units = "secs")
+          paste("(Time to run :", round(res, digits = 2), "s)")
+        }
+      }
+    }
+  })
+)
+```
+
+<!-- Set default parameters for all chunks -->
+```{r, setup, include = FALSE}
+set.seed(1337L)
+knitr::opts_chunk$set(echo = TRUE, # display code
+                      # display chunk output
+                      message = FALSE,
+                      warning = FALSE,
+                      fold_output = FALSE, # useful for sessionInfo()
+                      fold_plot = FALSE,
+                      
+                      # figure settings
+                      fig.align = 'center',
+                      fig.width = 20,
+                      fig.height = 15,
+                      
+                      # something about seed, chunk and Rmarkdown compilation
+                      # https://stackoverflow.com/questions/39417003/long-vectors-not-supported-yet-error-in-rmd-but-not-in-r-script
+                      # cache = TRUE,
+                      cache.lazy = FALSE, 
+                      
+                      # add runtime after chunk
+                      time_it = FALSE,
+                      
+                      # save figures in PDF in a separate folder
+                      dev = c('png', 'pdf'), # tiff or pdf alone renders bad in html
+                      # dpi = 300,
+                      fig.path = "figures_detail/",
+                      pdf.options(encoding = "ISOLatin9.enc"))
+```
+
+
+This file is used to prepare the figures for the paper.
+
+```{r library}
+library(dplyr)
+library(patchwork)
+library(ggplot2)
+library(ComplexHeatmap)
+library(org.Mm.eg.db)
+
+.libPaths()
+```
+
+
+# Preparation
+
+Here are the folders where analyzes are stored :
+
+```{r locations}
+data_dir = "./.."
+list.files(data_dir)
+```
+
+
+We load the dataset containing all cells :
+
+```{r load_all_sobj}
+sobj = readRDS(paste0(data_dir, "/3_combined/hs_hd_sobj.rds"))
+sobj
+```
+
+These are all the samples analyzed :
+
+```{r sample_info, class.source = 'fold-hide', fig.width = 8, fig.height = 3}
+sample_info = readRDS(paste0(data_dir, "/1_metadata/hs_hd_sample_info.rds"))
+
+# Nb cells by dataset
+to_plot = table(sobj$sample_identifier) %>%
+  as.data.frame.table(., stringsAsFactors = FALSE) %>%
+  `colnames<-`(c("sample_identifier", "nb_cells")) %>%
+  dplyr::left_join(x = ., y = sample_info, by = "sample_identifier") 
+
+# patchwork
+plot_list = aquarius::fig_plot_gb(to_plot, title = "Available datasets")
+patchwork::wrap_plots(plot_list) +
+  patchwork::plot_layout(design = "A\nB", heights = c(0.1,5)) &
+  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 15))
+```
+
+These are the custom colors for cell populations :
+
+```{r color_markers, fig.width = 10, fig.height = 1, class.source = "fold-hide"}
+color_markers = readRDS(paste0(data_dir, "/1_metadata/hs_hd_color_markers.rds"))
+color_markers = color_markers[names(color_markers) != "melanocytes"]
+
+data.frame(cell_type = names(color_markers),
+           color = unlist(color_markers)) %>%
+  ggplot2::ggplot(., aes(x = cell_type, y = 0, fill = cell_type)) +
+  ggplot2::geom_point(pch = 21, size = 5) +
+  ggplot2::scale_fill_manual(values = unlist(color_markers), breaks = names(color_markers)) +
+  ggplot2::theme_classic() +
+  ggplot2::theme(legend.position = "none",
+                 axis.line = element_blank(),
+                 axis.title = element_blank(),
+                 axis.ticks = element_blank(),
+                 axis.text.y = element_blank(),
+                 axis.text.x = element_text(hjust = 1, angle = 20))
+```
+
+We define custom colors for sample type :
+
+```{r sample_type_colors, fig.width = 5, fig.height = 5}
+sample_type_colors = setNames(nm = levels(sample_info$sample_type),
+                              c("#C55F40", "#2C78E6"))
+
+graphics::pie(rep(1, length(sample_type_colors)),
+              col = sample_type_colors,
+              labels = names(sample_type_colors))
+```
+
+We set a background color :
+
+```{r bg_color}
+bg_color = "gray94"
+```
+
+
+This is the correspondence between cell types and cell families, and custom colors to color cells by cell family :
+
+```{r cell_family}
+custom_order_cell_type = data.frame(
+  cell_type = names(color_markers),
+  cell_family = c(rep("immune cells", 5),
+                  rep("matrix", 5),
+                  rep("non matrix", 5)),
+  stringsAsFactors = FALSE)
+custom_order_cell_type$cell_type = factor(custom_order_cell_type$cell_type,
+                                          levels = custom_order_cell_type$cell_type)
+rownames(custom_order_cell_type) = custom_order_cell_type$cell_type
+
+family_color = c("immune cells" = "slateblue1",
+                 "matrix" = "mediumseagreen",
+                 "non matrix" = "firebrick3")
+```
+
+
+# All samples
+
+## Settings
+
+This is the projection name to visualize cells :
+
+```{r all_sobj_name2D}
+name2D = "harmony_38_tsne"
+name2D_atlas = name2D
+```
+
+## Preparation
+
+We define cluster type and cluster family :
+
+```{r cluster_type_family_all, fig.width = 7, fig.height = 5}
+cluster_type = table(sobj$cell_type, sobj$seurat_clusters) %>%
+  prop.table(., margin = 2) %>%
+  apply(., 2, which.max)
+cluster_type = setNames(nm = names(cluster_type),
+                        levels(sobj$cell_type)[cluster_type])
+
+sobj$cluster_type = cluster_type[sobj$seurat_clusters]
+sobj$cluster_type = factor(sobj$cluster_type,
+                           levels = levels(sobj$cell_type))
+sobj$cluster_family = custom_order_cell_type[sobj$cluster_type, "cell_family"]
+sobj$cluster_family = factor(sobj$cluster_family,
+                             levels = names(family_color))
+```
+
+
+## Figures
+
+Project name :
+
+```{r fig2_B_project_name, fig.width = 4, fig.height = 4}
+# Random order
+set.seed(1234)
+rnd_order = sample(colnames(sobj), replace = FALSE, size = ncol(sobj))
+
+# Extract coordinates
+cells_coord = sobj@reductions[[name2D]]@cell.embeddings %>%
+  as.data.frame() %>%
+  `colnames<-`(c("Dim1", "Dim2"))
+cells_coord$project_name = sobj$project_name
+cells_coord = cells_coord[(rnd_order), ]
+
+# Plot
+ggplot2::ggplot(cells_coord, aes(x = Dim1, y = Dim2, col = project_name)) +
+  ggplot2::geom_point(size = 0.5) +
+  ggplot2::scale_color_manual(values = sample_info$color,
+                              breaks = sample_info$project_name) +
+  ggplot2::theme_void() +
+  ggplot2::theme(aspect.ratio = 1,
+                 legend.position = "none")
+```
+
+Cluster :
+
+```{r fig2_B_clusters, fig.width = 4, fig.height = 4}
+Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.4,
+                group.by = "seurat_clusters", label = TRUE) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() +
+  Seurat::NoLegend()
+```
+
+Cell type annotation :
+
+```{r fig2_B_cell_type, fig.width = 7, fig.height = 7}
+Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.5,
+                group.by = "cell_type", cols = color_markers) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() +
+  Seurat::NoLegend()
+```
+
+Cluster type annotation :
+
+```{r fig2_B_cluster_type, fig.width = 8, fig.height = 8}
+Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.5,
+                group.by = "cluster_type", cols = color_markers) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() +
+  Seurat::NoLegend()
+```
+
+Cluster family annotation :
+
+```{r fig2_B_cluster_family, fig.width = 6, fig.height = 6}
+Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.5,
+                group.by = "cluster_family", cols = family_color) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() +
+  Seurat::NoLegend()
+```
+
+Cell type annotation split by condition :
+
+```{r figS2_A_cell_type_split, fig.width = 8, fig.height = 5}
+plot_list = aquarius::plot_split_dimred(sobj, reduction = name2D,
+                                        group_by = "cell_type",
+                                        group_color = color_markers,
+                                        split_by = "sample_type",
+                                        split_color = sample_type_colors,
+                                        bg_color = bg_color)
+
+patchwork::wrap_plots(plot_list) &
+  Seurat::NoLegend()
+```
+
+Cluster type annotation split by condition :
+
+```{r figS2_A_cluster_type_split, fig.width = 8, fig.height = 5}
+plot_list = aquarius::plot_split_dimred(sobj, reduction = name2D,
+                                        group_by = "cluster_type",
+                                        group_color = color_markers,
+                                        split_by = "sample_type",
+                                        split_color = sample_type_colors,
+                                        bg_color = bg_color)
+
+patchwork::wrap_plots(plot_list) &
+  Seurat::NoLegend()
+```
+
+Gene expression to assess annotation :
+
+```{r figS2_B_genes, fig.width = 4, fig.height = 4}
+genes = c("PTPRC", "MSX2", "KRT14")
+names(genes) = c("immune cells", "matrix cells", "non-matrix cells")
+
+plot_list = lapply(c(1:length(genes)), FUN = function(gene_id) {
+  gene = genes[[gene_id]]
+  pop = names(genes)[gene_id]
+  
+  sobj$my_gene = Seurat::FetchData(sobj, gene)[, 1] %>%
+    aquarius::run_rescale(., new_min = 0, new_max = 10)
+  
+  Seurat::FeaturePlot(sobj, features = "my_gene", reduction = name2D) +
+    ggplot2::scale_color_gradientn(colors = aquarius::color_gene,
+                                   breaks = seq(0, 10, by = 2.5),
+                                   labels = c("min", rep("", 3), "max")) +
+    ggplot2::labs(title = gene) + 
+    # subtitle = pop) +
+    ggplot2::theme(aspect.ratio = 1,
+                   plot.title = element_text(hjust = 0.5, size = 17),
+                   plot.subtitle = element_text(hjust = 0.5, size = 15),
+                   legend.text = element_text(size = 15),
+                   legend.position = "none") +
+    Seurat::NoAxes()
+})
+
+plot_list
+```
+
+
+# Immune cells
+
+## Settings
+
+We load the immune cells dataset :
+
+```{r sobj_ctrl}
+sobj_ic = readRDS(paste0(data_dir, "/4_zoom/1_zoom_immune/immune_cells_sobj.rds"))
+sobj_ic
+```
+
+
+This is the projection name to visualize cells :
+
+```{r sobj_name2D_ctrl}
+name2D = "harmony_20_tsne"
+```
+
+## Preparation
+
+We defined cluster type and cluster family :
+
+```{r cluster_type_family_ic, fig.width = 7, fig.height = 5}
+cluster_type = table(sobj_ic$cell_type, sobj_ic$seurat_clusters) %>%
+  prop.table(., margin = 2) %>%
+  apply(., 2, which.max)
+cluster_type = setNames(nm = names(cluster_type),
+                        levels(sobj_ic$cell_type)[cluster_type])
+
+sobj_ic$cluster_type = cluster_type[sobj_ic$seurat_clusters]
+sobj_ic$cluster_type = factor(sobj_ic$cluster_type,
+                              levels = levels(sobj_ic$cell_type))
+sobj_ic$cluster_family = custom_order_cell_type[sobj_ic$cluster_type, "cell_family"]
+sobj_ic$cluster_family = factor(sobj_ic$cluster_family,
+                                levels = names(family_color))
+```
+
+## Figures
+
+Control cells on the full atlas :
+
+```{r fig2_C_location, fig.width = 5, fig.height = 5}
+sobj$is_immune = (colnames(sobj) %in% colnames(sobj_ic))
+
+Seurat::DimPlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
+                group.by = "is_immune", order = "TRUE") +
+  ggplot2::scale_color_manual(values = c(family_color[["immune cells"]], bg_color),
+                              breaks = c(TRUE, FALSE)) +
+  ggplot2::labs(title = "Immune cells",
+                subtitle = paste0(ncol(sobj_ic), " cells")) +
+  ggplot2::theme(aspect.ratio = 1,
+                 plot.title = element_text(hjust = 0.5, face = "bold"),
+                 plot.subtitle = element_text(hjust = 0.5)) +
+  Seurat::NoAxes() + Seurat::NoLegend()
+```
+
+Violin plot of IL1B in macrophages :
+
+```{r fig_ic_mac_il1b, fig.width = 4, fig.height = 4}
+subsobj = subset(sobj_ic, seurat_clusters == 2)
+table(subsobj$sample_type)
+
+il1b_hs = subsobj@assays$RNA@data["IL1B", subsobj$sample_type == "HS"]
+il1b_hd = subsobj@assays$RNA@data["IL1B", subsobj$sample_type == "HD"]
+il1b_hs_VS_il1b_hd = stats::t.test(il1b_hs, il1b_hd)
+il1b_hs_VS_il1b_hd
+
+Seurat::VlnPlot(subsobj, group.by = "sample_type",
+                features = "IL1B", cols = sample_type_colors) +
+  ggplot2::theme(axis.title.x = element_blank(),
+                 legend.position = "none")
+```
+
+Violin plot of GZMA in CD4 T cells :
+
+```{r fig_ic_t4_gzma, fig.width = 4, fig.height = 4}
+subsobj = subset(sobj_ic, seurat_clusters %in% c(0,10))
+table(subsobj$sample_type)
+
+gzma_hs = subsobj@assays$RNA@data["GZMA", subsobj$sample_type == "HS"]
+gzma_hd = subsobj@assays$RNA@data["GZMA", subsobj$sample_type == "HD"]
+gzma_hs_VS_gzma_hd = stats::t.test(gzma_hs, gzma_hd)
+gzma_hs_VS_gzma_hd
+
+Seurat::VlnPlot(subsobj, group.by = "sample_type",
+                features = "GZMA", cols = sample_type_colors) +
+  ggplot2::theme(axis.title.x = element_blank(),
+                 legend.position = "none")
+```
+
+
+# HFSC
+
+## Settings
+
+We load the HFSCs dataset :
+
+```{r sobj_hfsc}
+sobj_hfsc = readRDS(paste0(data_dir, "/4_zoom/2_zoom_hfsc/hfsc_sobj.rds"))
+sobj_hfsc
+```
+
+
+This is the projection name to visualize cells :
+
+```{r sobj_name2D_ctrl}
+name2D = "harmony_24_tsne"
+```
+
+
+## Figures
+
+Control cells on the full atlas :
+
+```{r fig2_C_location, fig.width = 5, fig.height = 5}
+sobj$is_hfsc = (colnames(sobj) %in% colnames(sobj_hfsc))
+
+Seurat::DimPlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
+                group.by = "is_hfsc", order = "TRUE") +
+  ggplot2::scale_color_manual(values = c(color_markers[["HFSC"]], bg_color),
+                              breaks = c(TRUE, FALSE)) +
+  ggplot2::labs(title = "HFSCs",
+                subtitle = paste0(ncol(sobj_hfsc), " cells")) +
+  ggplot2::theme(aspect.ratio = 1,
+                 plot.title = element_text(hjust = 0.5, face = "bold"),
+                 plot.subtitle = element_text(hjust = 0.5)) +
+  Seurat::NoAxes() + Seurat::NoLegend()
+```
+
+Violin plot of IFITM3 :
+
+```{r fig_hfsc_ifitm3, fig.width = 4, fig.height = 4}
+table(sobj_hfsc$sample_type)
+
+ifitm3_hs = sobj_hfsc@assays$RNA@data["IFITM3", sobj_hfsc$sample_type == "HS"]
+ifitm3_hd = sobj_hfsc@assays$RNA@data["IFITM3", sobj_hfsc$sample_type == "HD"]
+ifitm3_hs_VS_ifitm3_hd = stats::t.test(ifitm3_hs, ifitm3_hd)
+ifitm3_hs_VS_ifitm3_hd
+
+Seurat::VlnPlot(sobj_hfsc, group.by = "sample_type",
+                features = "IFITM3", cols = sample_type_colors) +
+  ggplot2::theme(axis.title.x = element_blank(),
+                 legend.position = "none")
+```
+
+Project name :
+
+```{r fig_hfsc_project_name, fig.width = 4, fig.height = 4}
+# Random order
+set.seed(1234)
+rnd_order = sample(colnames(sobj_hfsc), replace = FALSE, size = ncol(sobj_hfsc))
+
+# Extract coordinates
+cells_coord = sobj_hfsc@reductions[[name2D]]@cell.embeddings %>%
+  as.data.frame() %>%
+  `colnames<-`(c("Dim1", "Dim2"))
+cells_coord$project_name = sobj_hfsc$project_name
+cells_coord = cells_coord[(rnd_order), ]
+
+# Plot
+ggplot2::ggplot(cells_coord, aes(x = Dim1, y = Dim2, col = project_name)) +
+  ggplot2::geom_point(size = 1.2) +
+  ggplot2::scale_color_manual(values = sample_info$color,
+                              breaks = sample_info$project_name) +
+  ggplot2::theme_void() +
+  ggplot2::theme(aspect.ratio = 1,
+                 legend.position = "none")
+```
+
+Cluster :
+
+```{r fig_hfsc_clusters, fig.width = 4, fig.height = 4}
+Seurat::DimPlot(sobj_hfsc, reduction = name2D, pt.size = 1,
+                group.by = "seurat_clusters", label = TRUE) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() +
+  Seurat::NoLegend()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r fig2_C_location, fig.width = 5, fig.height = 5}
+sobj$is_hfsc_ibl_mors = sobj$cluster_type %in% c("IBL", "ORS")
+
+Seurat::DimPlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
+                group.by = "is_hfsc_ibl_mors", order = "TRUE") +
+  ggplot2::scale_color_manual(values = c(family_color[["non matrix"]], bg_color),
+                              breaks = c(TRUE, FALSE)) +
+  ggplot2::labs(title = "Cell of interest"#,
+                # subtitle = paste0(ncol(sobj_hfsc), " cells")
+                ) +
+  ggplot2::theme(aspect.ratio = 1,
+                 plot.title = element_text(hjust = 0.5, face = "bold"),
+                 plot.subtitle = element_text(hjust = 0.5)) +
+  Seurat::NoAxes() + Seurat::NoLegend()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# R Session
+
+```{r sessioninfo, echo = FALSE, fold_output = TRUE}
+sessionInfo()
+```
+
