@@ -138,6 +138,11 @@ These are the custom colors for cell populations :
 ```{r color_markers, fig.width = 10, fig.height = 1, class.source = "fold-hide"}
 color_markers = readRDS(paste0(data_dir, "/1_metadata/hs_hd_color_markers.rds"))
 color_markers = color_markers[names(color_markers) != "melanocytes"]
+ors_color = color_markers["ORS"]
+color_markers["ORS"] = color_markers["IFE"] 
+color_markers["IFE"] = ors_color
+color_markers["B cells"] = "chocolate3"
+rm(ors_color)
 
 data.frame(cell_type = names(color_markers),
            color = unlist(color_markers)) %>%
@@ -155,13 +160,21 @@ data.frame(cell_type = names(color_markers),
 
 We define custom colors for sample type :
 
-```{r sample_type_colors, fig.width = 5, fig.height = 5}
+```{r sample_type_colors, fig.width = 3, fig.height = 0.75, class.source = "fold-hide"}
 sample_type_colors = setNames(nm = levels(sample_info$sample_type),
                               c("#C55F40", "#2C78E6"))
 
-graphics::pie(rep(1, length(sample_type_colors)),
-              col = sample_type_colors,
-              labels = names(sample_type_colors))
+data.frame(cell_type = names(sample_type_colors),
+           color = unlist(sample_type_colors)) %>%
+  ggplot2::ggplot(., aes(x = cell_type, y = 0, fill = cell_type)) +
+  ggplot2::geom_point(pch = 21, size = 5) +
+  ggplot2::scale_fill_manual(values = unlist(sample_type_colors), breaks = names(sample_type_colors)) +
+  ggplot2::theme_classic() +
+  ggplot2::theme(legend.position = "none",
+                 axis.line = element_blank(),
+                 axis.title = element_blank(),
+                 axis.ticks = element_blank(),
+                 axis.text.y = element_blank())
 ```
 
 We set a background color :
@@ -203,6 +216,15 @@ name2D_atlas = name2D
 
 ## Preparation
 
+We make a low resolutive clustering for the heatmap :
+
+```{r cluster_all}
+sobj = Seurat::FindClusters(sobj, resolution = 0.4)
+
+length(levels(sobj$seurat_clusters))
+```
+
+
 We define cluster type and cluster family :
 
 ```{r cluster_type_family_all, fig.width = 7, fig.height = 5}
@@ -225,7 +247,7 @@ sobj$cluster_family = factor(sobj$cluster_family,
 
 Project name :
 
-```{r fig2_B_project_name, fig.width = 4, fig.height = 4}
+```{r fig1_sample_identifier, fig.width = 4, fig.height = 4}
 # Random order
 set.seed(1234)
 rnd_order = sample(colnames(sobj), replace = FALSE, size = ncol(sobj))
@@ -249,7 +271,7 @@ ggplot2::ggplot(cells_coord, aes(x = Dim1, y = Dim2, col = project_name)) +
 
 Cluster :
 
-```{r fig2_B_clusters, fig.width = 4, fig.height = 4}
+```{r fig1_cluster, fig.width = 4, fig.height = 4}
 Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.4,
                 group.by = "seurat_clusters", label = TRUE) +
   ggplot2::theme(aspect.ratio = 1) +
@@ -259,7 +281,7 @@ Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.4,
 
 Cell type annotation :
 
-```{r fig2_B_cell_type, fig.width = 7, fig.height = 7}
+```{r fig1_cell_type, fig.width = 7, fig.height = 7}
 Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.5,
                 group.by = "cell_type", cols = color_markers) +
   ggplot2::theme(aspect.ratio = 1) +
@@ -267,19 +289,9 @@ Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.5,
   Seurat::NoLegend()
 ```
 
-Cluster type annotation :
-
-```{r fig2_B_cluster_type, fig.width = 8, fig.height = 8}
-Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.5,
-                group.by = "cluster_type", cols = color_markers) +
-  ggplot2::theme(aspect.ratio = 1) +
-  Seurat::NoAxes() +
-  Seurat::NoLegend()
-```
-
 Cluster family annotation :
 
-```{r fig2_B_cluster_family, fig.width = 6, fig.height = 6}
+```{r fig1_cluster_family, fig.width = 6, fig.height = 6}
 Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.5,
                 group.by = "cluster_family", cols = family_color) +
   ggplot2::theme(aspect.ratio = 1) +
@@ -289,7 +301,7 @@ Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.5,
 
 Cell type annotation split by condition :
 
-```{r figS2_A_cell_type_split, fig.width = 8, fig.height = 5}
+```{r fig1_cell_type_split, fig.width = 8, fig.height = 5}
 plot_list = aquarius::plot_split_dimred(sobj, reduction = name2D,
                                         group_by = "cell_type",
                                         group_color = color_markers,
@@ -301,23 +313,9 @@ patchwork::wrap_plots(plot_list) &
   Seurat::NoLegend()
 ```
 
-Cluster type annotation split by condition :
-
-```{r figS2_A_cluster_type_split, fig.width = 8, fig.height = 5}
-plot_list = aquarius::plot_split_dimred(sobj, reduction = name2D,
-                                        group_by = "cluster_type",
-                                        group_color = color_markers,
-                                        split_by = "sample_type",
-                                        split_color = sample_type_colors,
-                                        bg_color = bg_color)
-
-patchwork::wrap_plots(plot_list) &
-  Seurat::NoLegend()
-```
-
 Gene expression to assess annotation :
 
-```{r figS2_B_genes, fig.width = 4, fig.height = 4}
+```{r fig1_gene_family, fig.width = 4, fig.height = 4}
 genes = c("PTPRC", "MSX2", "KRT14")
 names(genes) = c("immune cells", "matrix cells", "non-matrix cells")
 
@@ -344,6 +342,161 @@ plot_list = lapply(c(1:length(genes)), FUN = function(gene_id) {
 
 plot_list
 ```
+
+Barplot by cluster family :
+
+```{r fig1_barplot_family, fig.width = 5.5, fig.height = 4.5}
+quantif = table(sobj$sample_identifier) %>%
+  as.data.frame.table() %>%
+  `colnames<-`(c("Sample", "nb_cells"))
+
+aquarius::plot_barplot(df = table(sobj$sample_identifier,
+                                  sobj$cluster_family) %>%
+                         as.data.frame.table() %>%
+                         `colnames<-`(c("Sample", "Cell Type", "Number")),
+                       x = "Sample", y = "Number", fill = "Cell Type",
+                       position = position_fill()) +
+  ggplot2::geom_label(data = quantif, inherit.aes = FALSE,
+                      aes(x = .data$Sample, y = 1.05, label = .data$nb_cells),
+                      label.size = 0, size = 5) +
+  ggplot2::scale_fill_manual(values = unlist(family_color),
+                             breaks = names(family_color),
+                             name = "Cell Family") +
+  ggplot2::scale_y_continuous(breaks = seq(0, 1, by = 0.25),
+                              labels = paste0(seq(0, 100, by = 25), sep = " %"),
+                              expand = ggplot2::expansion(add = c(0, 0.05))) +
+  ggplot2::theme(axis.title.y = element_blank(),
+                 axis.line.x = element_line(colour = "lightgray"),
+                 text = element_text(size = 15),
+                 legend.position = "none")
+```
+
+Heatmap of cluster proportion by sample :
+
+```{r fig1_heatmap_prop, fig.width = 15, fig.height = 6, class.source = "fold-hide"}
+group_by = "seurat_clusters"
+
+cluster_by_sample = table(sobj$sample_identifier,
+                          sobj@meta.data[, group_by]) %>%
+  prop.table(margin = 1) %>%
+  as.matrix()
+
+## Representative markers
+cluster_markers = c("PTPRC", "CD3E", "AIF1", "MSX2", "DIO2", "GPX2", "KRT16")
+ht_annot = Seurat::GetAssayData(sobj, assay = "RNA", slot = "data")[cluster_markers, ] %>%
+  Matrix::t() %>% as.data.frame()
+ht_annot$clusters = sobj@meta.data[, group_by]
+ht_annot = ht_annot %>%
+  dplyr::group_by(clusters) %>%
+  dplyr::summarise_all(funs('mean' = mean)) %>%
+  as.data.frame() %>%
+  dplyr::select(-clusters) %>%
+  `colnames<-`(c(cluster_markers))
+
+color_fun = function(one_gene) {
+  gene_range = range(ht_annot[, one_gene])
+  gene_palette = circlize::colorRamp2(colors = c("#FFFFFF", aquarius::color_gene[-1]),
+                                      breaks = seq(from = gene_range[1], to = gene_range[2],
+                                                   length.out = length(aquarius::color_gene)))
+  return(gene_palette)
+}
+
+## Bottom annotation : average gene expression
+ha_bottom = ComplexHeatmap::HeatmapAnnotation(df = ht_annot,
+                                              which = "column",
+                                              show_legend = FALSE,
+                                              col = setNames(nm = cluster_markers,
+                                                             lapply(cluster_markers, FUN = color_fun)),
+                                              annotation_name_side = "right")
+
+## Right annotation : number of cells by dataset
+ht_annot = table(sobj$sample_identifier) %>%
+  as.data.frame.table() %>%
+  `colnames<-`(c("sample_identifier", "nb_cells")) %>%
+  `rownames<-`(.$sample_identifier) %>%
+  dplyr::select(-sample_identifier)
+
+ha_right = ComplexHeatmap::HeatmapAnnotation(
+  df = ht_annot,
+  which = "row",
+  show_legend = TRUE,
+  annotation_name_side = "top",
+  col = list(nb_cells  = circlize::colorRamp2(colors = RColorBrewer::brewer.pal(name = "Greys", n = 9),
+                                              breaks = seq(from = range(ht_annot$nb_cells)[1],
+                                                           to = range(ht_annot$nb_cells)[2],
+                                                           length.out = 9))))
+
+## Left annotation : gender
+ha_left = ComplexHeatmap::HeatmapAnnotation(
+  gender = sample_info$gender,
+  which = "row",
+  show_legend = TRUE,
+  annotation_name_side = "bottom",
+  col = list(gender = setNames(nm = c("F", "M"),
+                               c("lightcyan3", "navyblue"))))
+
+## Top annotation : main cell type in this cluster
+ht_annot = table(sobj$sample_identifier,
+                 sobj@meta.data[, group_by]) %>%
+  prop.table(margin = 1) %>%
+  as.matrix()
+
+ht_annot = table(sobj$cell_type,
+                 sobj@meta.data[, group_by]) %>%
+  prop.table(., margin = 2) %>%
+  apply(., 2, which.max)
+ht_annot = data.frame(row.names = names(ht_annot),
+                      cell_type = names(color_markers)[ht_annot],
+                      stringsAsFactors = FALSE)
+ht_annot = dplyr::left_join(ht_annot, custom_order_cell_type, by = "cell_type") %>%
+  # Simplification for matrix
+  dplyr::mutate(cell_type = ifelse(cell_type %in% c("medulla", "cortex", "cuticle"), yes = "hair shaft", no = cell_type)) %>%
+  # Simplification for T cells
+  dplyr::mutate(cell_type = ifelse(cell_type %in% c("CD4 T cells", "CD8 T cells"), yes = "T cells", no = cell_type)) %>%
+  # Simplification for APC
+  dplyr::mutate(cell_type = ifelse(cell_type %in% c("Langerhans cells", "macrophages"), yes = "APC", no = cell_type)) %>%
+  # Add color
+  dplyr::mutate(color = as.character(color_markers[cell_type])) %>%
+  dplyr::mutate(color = ifelse(cell_type == "hair shaft", yes = "#FFB6C1", no = color)) %>%
+  dplyr::mutate(color = ifelse(cell_type == "T cells", yes = "#8A6EE6", no = color)) %>%
+  dplyr::mutate(color = ifelse(cell_type == "APC", yes = "#9CAA4B", no = color))
+
+ha_top = ComplexHeatmap::HeatmapAnnotation(
+  cell_type = ht_annot$cell_type,
+  # cell_family = ht_annot$cell_family,
+  which = "column",
+  show_legend = TRUE,
+  annotation_name_side = "left",
+  col = list(cell_type = setNames(nm = ht_annot$cell_type,
+                                  ht_annot$color)
+             #, cell_family = family_color
+             ))
+
+## Assemble heatmap
+ht = ComplexHeatmap::Heatmap(cluster_by_sample,
+                             heatmap_legend_param = list(title = "Proportion",
+                                                         col = c("#2166AC", "#F7F7F7", "#B2182B")),
+                             # bottom_annotation = ha_bottom,
+                             right_annotation = ha_right,
+                             left_annotation = ha_left,
+                             top_annotation = ha_top,
+                             cluster_rows = TRUE,
+                             cluster_columns = TRUE,
+                             row_title = "Sample",
+                             row_names_gp = grid::gpar(names = sample_info$sample_identifier,
+                                                       col = sample_info$color,
+                                                       fontface = "bold"),
+                             column_title = "Cluster",
+                             column_names_centered = TRUE,
+                             row_names_side = "left",
+                             column_names_side = "top",
+                             column_names_rot = 0)
+
+## Draw !
+ComplexHeatmap::draw(ht, merge_legends = TRUE)
+```
+
+
 
 
 # Immune cells
@@ -546,7 +699,7 @@ Seurat::DimPlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
                               breaks = c(TRUE, FALSE)) +
   ggplot2::labs(title = "Cell of interest"#,
                 # subtitle = paste0(ncol(sobj_hfsc), " cells")
-                ) +
+  ) +
   ggplot2::theme(aspect.ratio = 1,
                  plot.title = element_text(hjust = 0.5, face = "bold"),
                  plot.subtitle = element_text(hjust = 0.5)) +

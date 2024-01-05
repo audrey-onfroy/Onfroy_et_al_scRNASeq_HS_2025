@@ -443,7 +443,7 @@ We generate a clustering :
 
 ```{r clustering2, fig.width = 6, fig.height = 4}
 sobj = Seurat::FindNeighbors(sobj, reduction = reduction, dims = 1:ndims)
-sobj = Seurat::FindClusters(sobj, resolution = 1)
+sobj = Seurat::FindClusters(sobj, resolution = 1.2)
 
 dimplot_clusters = Seurat::DimPlot(sobj, reduction = name2D, label = TRUE) +
   Seurat::NoAxes() +

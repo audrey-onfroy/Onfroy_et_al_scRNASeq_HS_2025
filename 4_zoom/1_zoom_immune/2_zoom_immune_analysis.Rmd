@@ -1,5 +1,5 @@
 ---
-title: "hN project"
+title: "HS project"
 subtitle: "Zoom in immune cells"
 author: "Audrey"
 date: "`r format(Sys.time(), '%Y-%m-%d')`"
@@ -107,17 +107,21 @@ sobj = readRDS(paste0(out_dir, "/", save_name, "_sobj.rds"))
 sobj
 ```
 
-and sample information :
+We load the sample information :
 
-```{r load_sample_info}
-sample_info = readRDS(paste0(out_dir, "/", save_name, "_sample_info.rds")) 
-sample_info
+```{r custom_palette_sample, fig.width = 6, fig.height = 6}
+sample_info = readRDS(paste0(out_dir, "/../../1_metadata/hs_hd_sample_info.rds"))
+project_names_oi = sample_info$project_name
+
+graphics::pie(rep(1, nrow(sample_info)),
+              col = sample_info$color,
+              labels = sample_info$project_name)
 ```
 
 Here are custom colors for each cell type :
 
 ```{r color_markers, fig.width = 10, fig.height = 1, class.source = "fold-hide"}
-color_markers = readRDS(paste0(out_dir, "/../../2_metadata/hN_metadata_color_markers.rds"))
+color_markers = readRDS(paste0(out_dir, "/../../1_metadata/hs_hd_color_markers.rds"))
 
 data.frame(cell_type = names(color_markers),
            color = unlist(color_markers)) %>%
@@ -129,13 +133,14 @@ data.frame(cell_type = names(color_markers),
                  axis.line = element_blank(),
                  axis.title = element_blank(),
                  axis.ticks = element_blank(),
-                 axis.text.y = element_blank())
+                 axis.text.y = element_blank(),
+                 axis.text.x = element_text(angle = 30, hjust = 1))
 ```
 
 This is the projection of interest :
 
 ```{r name2D}
-name2D = "harmony_40_tsne"
+name2D = "harmony_20_tsne"
 ```
 
 We design a custom functions to represent cells of interest on the projection :
@@ -233,7 +238,7 @@ cluster_plot
 
 We visualize cell type split by sample :
 
-```{r plot_split_dimred, fig.width = 12, fig.height = 10}
+```{r plot_split_dimred, fig.width = 12, fig.height = 7}
 plot_list = aquarius::plot_split_dimred(sobj,
                                         reduction = name2D,
                                         split_by = "project_name",
@@ -254,8 +259,6 @@ patchwork::wrap_plots(plot_list, ncol = 4) &
 We summarize major cell type by cluster :
 
 ```{r cell_type_clusters}
-sobj$cell_type = as.factor(sobj$cell_type)
-
 cell_type_clusters = sobj@meta.data[, c("cell_type", "seurat_clusters")] %>%
   table() %>%
   prop.table(., margin = 2) %>%
@@ -272,6 +275,13 @@ sobj$cluster_type = cell_type_clusters[sobj$seurat_clusters] %>%
   as.factor()
 table(sobj$cluster_type, sobj$cell_type)
 ```
+
+We subset `color_markers` :
+
+```{r subset_colors}
+color_markers = color_markers[levels(sobj$cluster_type)]
+```
+
 
 We compare cluster annotation and cell type annotation :
 
@@ -295,191 +305,49 @@ patchwork::wrap_plots(p1, p2, guides = "collect")
 
 # Differential expression
 
-What is the identity of specific clusters ?
+For each population, what are the differences between healthy donors (HD) and HS patients (HS) ? We save the results in a list :
 
-## Dendritic cells
+```{r list_results}
+list_results = list()
+```
 
-DC are those clusters :
 
-```{r clusters_oiDC}
-clusters_oi = names(which(cell_type_clusters == "DC"))
+## Langerhans cells
+
+Langerhans cells are those clusters :
+
+```{r clusters_oi_LC}
+clusters_oi = names(which(cell_type_clusters == "Langerhans cells"))
 clusters_oi
 ```
 
 We represent those clusters on the projection :
 
-```{r see_DC, fig.width = 12, fig.height = 5}
-see_clusters("DC")
+```{r see_LC, fig.width = 12, fig.height = 5}
+see_clusters("Langerhans cells")
 ```
 
+We perform differential expression between HS and HD, within this population :
 
-### Cluster 5 (Ccr7)
+```{r subset_LC, fig.width = 5, fig.height = 5}
+subsobj = subset(sobj, seurat_clusters %in% c(3, 8))
+Seurat::Idents(subsobj) = subsobj$sample_type
 
-```{r cluster5_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 5
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster5_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-
-### Cluster 8 (Hspa1a/b)
-
-```{r cluster8_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 8
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
+table(subsobj$sample_type)
 ```
 
 We make identify specific markers for these group :
 
-```{r cluster8_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
+```{r de_LC, fig.width = 5, fig.height = 5}
+mark = Seurat::FindMarkers(subsobj, ident.1 = "HS", ident.2 = "HD")
 
 mark = mark %>%
   dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
   dplyr::arrange(-avg_logFC, pct.1 - pct.2)
+
+list_results[["Langerhans cells"]] = mark
+
 dim(mark)
-
-head(mark, n = 20)
-```
-
-### Cluster 16 (cycling)
-
-```{r cluster16_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 16
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster16_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-### Cluster 19 (Xcr1)
-
-```{r cluster19_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 19
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster19_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-### Cluster 20 (Siglech, Cd7)
-
-```{r cluster20_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 20
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster20_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-
-### Cluster 22 (Cxcl10/11)
-
-```{r cluster22_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 22
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster22_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-### Cluster 26 (Mreg)
-
-```{r cluster26_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 26
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster26_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
 head(mark, n = 20)
 ```
 
@@ -488,595 +356,219 @@ head(mark, n = 20)
 
 Macrophages are those clusters :
 
-```{r clusters_oimacrophages}
+```{r clusters_oi_macro}
 clusters_oi = names(which(cell_type_clusters == "macrophages"))
 clusters_oi
 ```
 
 We represent those clusters on the projection :
 
-```{r see_macrophages, fig.width = 12, fig.height = 5}
+```{r see_macro, fig.width = 12, fig.height = 5}
 see_clusters("macrophages")
 ```
 
-### Cluster 10 (Plac8, M1)
+We perform differential expression between HS and HD, within this population :
 
-```{r cluster10_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 10
-group2 = clusters_oi
+```{r subset_macro, fig.width = 5, fig.height = 5}
+subsobj = subset(sobj, seurat_clusters %in% c(2))
+Seurat::Idents(subsobj) = subsobj$sample_type
 
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
+table(subsobj$sample_type)
 ```
 
 We make identify specific markers for these group :
 
-```{r cluster10_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
+```{r de_macro, fig.width = 5, fig.height = 5}
+mark = Seurat::FindMarkers(subsobj, ident.1 = "HS", ident.2 = "HD")
 
 mark = mark %>%
   dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
   dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
 
+list_results[["macrophages"]] = mark
+
+dim(mark)
 head(mark, n = 20)
 ```
 
 
-### Cluster 11 (Cytip, mono ?)
+## CD4 T cells
 
-```{r cluster11_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 11
-group2 = clusters_oi
+CD4 T cells are those clusters :
 
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster11_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-
-### Cluster 12 (Cmpk2)
-
-```{r cluster12_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 12
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster12_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-
-### Cluster 0 (Rsad2 high)
-
-```{r cluster0_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 0
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster0_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-
-### Clusters 3 and 7 (Retnla high, epi-macro)
-
-```{r cluster3_7_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = c(3, 7)
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster3_7_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-
-### Cluster 2 (Klf2 high)
-
-```{r cluster2_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 2
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster2_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-
-### Cluster 6 (mito)
-
-```{r cluster6_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 6
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster6_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-
-### Cluster 15 (pNF, Cx3xcr1)
-
-```{r cluster15_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 15
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster15_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-
-### Cluster 1 (Il1b)
-
-```{r cluster1_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 1
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster1_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-### Cluster 4 (Cx3cr1)
-
-```{r cluster4_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 4
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster4_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-
-## T cells
-
-T cells are those clusters :
-
-```{r clusters_oit}
-clusters_oi = names(which(cell_type_clusters == "T cells"))
+```{r clusters_oi_cd4}
+clusters_oi = names(which(cell_type_clusters == "CD4 T cells"))
 clusters_oi
 ```
 
 We represent those clusters on the projection :
 
-```{r see_t, fig.width = 12, fig.height = 5}
-see_clusters("T cells")
+```{r see_cd4, fig.width = 12, fig.height = 5}
+see_clusters("CD4 T cells")
 ```
 
-### Cluster 13 (Themis)
+We perform differential expression between HS and HD, within cluster 0 only, because other clusters contain too few cells and have distinct expression profile from cluster 0 :
 
-```{r cluster13_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 13
-group2 = clusters_oi
+```{r subset_cd4, fig.width = 5, fig.height = 5}
+subsobj = subset(sobj, seurat_clusters %in% c(0))
+Seurat::Idents(subsobj) = subsobj$sample_type
 
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
-```
-
-We make identify specific markers for these group :
-
-```{r cluster13_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
-```
-
-
-### Cluster 14 (Gata3)
-
-```{r cluster14_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 14
-group2 = clusters_oi
-
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
+table(subsobj$sample_type)
 ```
 
 We make identify specific markers for these group :
 
-```{r cluster14_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
+```{r de_cd4, fig.width = 5, fig.height = 5}
+mark = Seurat::FindMarkers(subsobj, ident.1 = "HS", ident.2 = "HD")
 
 mark = mark %>%
   dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
   dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
 
+list_results[["CD4 T cells"]] = mark
+
+dim(mark)
 head(mark, n = 20)
 ```
 
-### Cluster 23 (Scart1)
+## CD8 T cells
 
-```{r cluster23_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 23
-group2 = clusters_oi
+CD8 T cells are those clusters :
 
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
+```{r clusters_oi_cd8}
+clusters_oi = names(which(cell_type_clusters == "CD8 T cells"))
+clusters_oi
+```
+
+We represent those clusters on the projection :
+
+```{r see_cd8, fig.width = 12, fig.height = 5}
+see_clusters("CD8 T cells")
+```
+
+
+We perform differential expression between HS and HD, within cluster 1 only, because other clusters contain too few cells and have distinct expression profile from cluster 1 :
+
+```{r subset_cd8_1, fig.width = 5, fig.height = 5}
+subsobj = subset(sobj, seurat_clusters %in% c(1))
+Seurat::Idents(subsobj) = subsobj$sample_type
+
+table(subsobj$sample_type)
 ```
 
 We make identify specific markers for these group :
 
-```{r cluster23_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
+```{r de_cd8_1, fig.width = 5, fig.height = 5}
+mark = Seurat::FindMarkers(subsobj, ident.1 = "HS", ident.2 = "HD")
 
 mark = mark %>%
   dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
   dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
 
+list_results[["CD8 T cells"]] = mark
+
+dim(mark)
 head(mark, n = 20)
 ```
 
-### Cluster 24 (Igfbp7)
+# Visualisation
 
-```{r cluster24_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 24
-group2 = clusters_oi
+We represent differentially expressed genes, only in the four populations of interest :
 
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
+```{r subset_sobj}
+sobj = subset(sobj, cluster_type %in% c("B cells", "proliferative"), invert = TRUE)
+sobj
 ```
 
-We make identify specific markers for these group :
+We extract all DE genes :
 
-```{r cluster24_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
+```{r prep_genes}
+features_oi = lapply(list_results, FUN = rownames) %>%
+  unlist() %>% unname() %>% unique()
 
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
+length(features_oi)
 ```
 
-### Cluster 25 (Foxp3)
+## Heatmap
 
-```{r cluster25_see_blue_red, fig.width = 5, fig.height = 5}
-group1 = 25
-group2 = clusters_oi
+We prepare the scaled expression matrix :
 
-aquarius::plot_red_and_blue(sobj, group1, group2, reduction = name2D)
+```{r mat}
+mat_expression = Seurat::GetAssayData(sobj, assay = "RNA", slot = "data")[features_oi, ]
+mat_expression = Matrix::t(mat_expression)
+mat_expression = dynutils::scale_quantile(mat_expression) # between 0 and 1
+mat_expression = Matrix::t(mat_expression)
+mat_expression = as.matrix(mat_expression) # not sparse
+
+dim(mat_expression)
 ```
 
-We make identify specific markers for these group :
+We prepare the heatmap annotation :
 
-```{r cluster25_de, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj,
-                           ident.1 = group1, ident.2 = group2)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-dim(mark)
-
-head(mark, n = 20)
+```{r ha_top}
+ha_top = ComplexHeatmap::HeatmapAnnotation(
+  cell_type = sobj$cluster_type,
+  sample_type = sobj$sample_type,
+  cluster = sobj$seurat_clusters,
+  col = list(cell_type = color_markers,
+             sample_type = setNames(nm = c("HS", "HD"),
+                                    c("#C55F40", "#2C78E6")),
+             cluster = setNames(nm = levels(sobj$seurat_clusters),
+                                aquarius::gg_color_hue(length(levels(sobj$seurat_clusters))))))
 ```
 
+And the heatmap :
 
-# Manual annotation
-
-We re-annotate cell types. But, they can more sub-annotated :
-
-* macrophages :
-  - M1 macrophages (Plac8, Chil3)
-  - M2 epineurial macrophages (Retnla) : Rsad2 high or Klf2 high
-  - M2 endoneurial macrophages (Bcl2a1b) : 
-      - Il1b population
-      - Cx3cr1 population
-
-* monocytes :
-  - Cytip population
-  - Cmpk2 population
-
-* dendritic cells :
-  - Mreg population (https://doi.org/10.7554/eLife.56890, https://www.nature.com/articles/s41586-020-2134-y)
-  - mDC (Cd209a+) : Hspa1a population, Ccr7 population and Cxcl10 population
-  - pDC (Siglech+)
-  - cDC (Xcr1+)
-
-* T cells :
-  - Themis+
-  - Gata3+
-  - Foxp3+
-  - Scart1+
-  - Igfbp7+
-
-* NK cells :
-  - Prf1+ population
-  - Prf1- population
-
-
-```{r cell_type_manual}
-sobj$cell_type_manual = sobj@meta.data %>%
-  dplyr::mutate(cell_type_manual = case_when(
-    # Macrophages
-    seurat_clusters %in% c(0, 3, 7, 2, 6, 15) ~ "Epineurial macrophages (M2)",
-    seurat_clusters %in% c(1) ~ "Endoneurial macrophages (M2)",
-    seurat_clusters %in% c(4) ~ "Endoneurial macrophages (M2) Cx3cr1+",
-    seurat_clusters %in% c(10) ~ "M1 macrophages",
-    seurat_clusters %in% c(11, 12) ~ "monocytes-macrophages",
-    
-    # Dendritic cells
-    seurat_clusters %in% c(8, 5, 22, 16) ~ "mDC",
-    seurat_clusters %in% c(19) ~ "cDC",
-    seurat_clusters %in% c(20) ~ "pDC",
-    seurat_clusters %in% c(26) ~ "mregDC",
-    
-    # Rare pop
-    seurat_clusters %in% c(21) ~ "B cells",
-    seurat_clusters %in% c(17) ~ "mast cells",
-    seurat_clusters %in% c(18) ~ "neutrophils",
-    seurat_clusters %in% c(9) ~ "NK cells",
-    
-    # T cells and NK cells
-    seurat_clusters %in% c(13) ~ "T cells",
-    seurat_clusters %in% c(25) ~ "T reg",
-    seurat_clusters %in% c(24, 23, 14) ~ "T eff")) %>%
-  dplyr::pull(cell_type_manual) %>%
+```{r heatmap, fig.width = 15, fig.height = 40}
+sobj$cell_group = paste0(sobj$cluster_type, sobj$sample_type) %>%
   as.factor()
 
-table(sobj$cell_type_manual,
-      sobj$cell_type)
+ht = ComplexHeatmap::Heatmap(mat_expression,
+                             col = aquarius::color_cnv,
+                             # Annotation
+                             top_annotation = ha_top,
+                             # Grouping
+                             column_order = sobj@meta.data %>%
+                               dplyr::arrange(cluster_type, sample_type, seurat_clusters) %>%
+                               rownames(),
+                             column_split = sobj$cell_group,
+                             column_gap = rep(unit(c(0.01, 2), "mm"), 4),
+                             column_title = NULL,
+                             cluster_rows = FALSE,
+                             cluster_columns = FALSE,
+                             show_column_names = FALSE,
+                             # Visual aspect
+                             show_heatmap_legend = TRUE,
+                             border = TRUE)
+
+ComplexHeatmap::draw(ht,
+                     merge_legend = TRUE,
+                     heatmap_legend_side = "bottom",
+                     annotation_legend_side = "bottom")
 ```
 
-We associate custom colors :
+## Dotplot
 
-```{r manual_palette}
-manual_palette = list("Epineurial macrophages (M2)" = aquarius::c30_palette[3],
-                      "Endoneurial macrophages (M2)" = aquarius::c30_palette[22],
-                      "Endoneurial macrophages (M2) Cx3cr1+" = aquarius::c30_palette[23],
-                      "M1 macrophages" = aquarius::c30_palette[28],
-                      "monocytes-macrophages" = aquarius::c30_palette[10],
-                      "mDC" = aquarius::c30_palette[5],
-                      "cDC" = aquarius::c30_palette[12],
-                      "pDC" = aquarius::c30_palette[14],
-                      "mregDC" = aquarius::c30_palette[23],
-                      "B cells" = color_markers$`B cells`,
-                      "mast cells" = color_markers$`mast cells`,
-                      "neutrophils" = color_markers$neutrophils,
-                      "NK cells" = color_markers$`NK cells`,
-                      "T cells" = aquarius::c30_palette[4],
-                      "T reg" = aquarius::c30_palette[26],
-                      "T eff" = aquarius::c30_palette[27])
-
-sobj$cell_type_manual = as.character(sobj$cell_type_manual) %>%
-  factor(., levels = names(manual_palette))
-```
-
-```{r cell_type_manual_see, fig.width = 7, fig.height = 7}
-p = Seurat::DimPlot(sobj, reduction = name2D,
-                    group.by = "cell_type_manual", label = TRUE,
-                    cols = manual_palette) +
-  ggplot2::labs(title = "Immune cells atlas") +
-  Seurat::NoAxes() +
-  ggplot2::theme(aspect.ratio = 1,
-                 plot.title = element_text(hjust = 0.5),
-                 legend.position = "none")
-p
-```
-
-We make a representation split by sample :
-
-```{r plot_split_dimred_new_annot, fig.width = 10, fig.height = 15}
-plot_list = aquarius::plot_split_dimred(sobj,
-                                        reduction = name2D,
-                                        split_by = "project_name",
-                                        group_by = "cell_type_manual",
-                                        split_color = setNames(sample_info$color,
-                                                               nm = sample_info$project_name),
-                                        group_color = manual_palette)
-
-plot_list[[length(plot_list) + 1]] = patchwork::guide_area()
-
-patchwork::wrap_plots(plot_list, ncol = 3) +
-  patchwork::plot_layout(guides = "collect") &
-  guides(color = guide_legend(override.aes = list(size = 3), title = "Cluster annotation"))
-```
-
-
-We represent also the information as a barplot :
-
-```{r fig.width = 8, fig.height = 8}
-df_proportion = as.data.frame(table(sobj$sample_identifier, sobj$cell_type_manual))
-colnames(df_proportion) = c("orig.ident", "groupby", "freq")
-
-aquarius::plot_barplot(df_proportion,
-                       x = "orig.ident",
-                       y = "freq",
-                       fill = "groupby",
-                       position = ggplot2::position_fill()) +
-  ggplot2::scale_fill_manual(name = "Cell type",
-                             breaks = levels(sobj$cell_type_manual),
-                             values = manual_palette) +
-  ggplot2::theme(legend.position = "bottom")
-```
-
-And as a heatmap :
-
-```{r prop_heatmap_manual, fig.width = 12, fig.height = 6}
-# Major cell type by cluster
-cell_type_clusters = sobj@meta.data[, c("cell_type", "cell_type_manual")] %>%
-  table() %>%
-  prop.table(., margin = 2) %>%
-  apply(., 2, which.max)
-cell_type_clusters = setNames(levels(sobj$cell_type)[cell_type_clusters],
-                              nm = names(cell_type_clusters))
-
-# Heatmap annotation
-ha = ComplexHeatmap::HeatmapAnnotation(cell_type = cell_type_clusters,
-                                       col = list(cell_type = unlist(color_markers)))
-
-# Draw heatmap
-my_mat = sobj@meta.data[, c("sample_identifier", "cell_type_manual")] %>%
-  table() %>%
-  prop.table(., margin = 1) %>% #"+"(0.001) %>% log()
-  as.data.frame.array() %>%
-  apply(., 2, FUN = aquarius::run_rescale, new_min = 0, new_max = 1)
-
-ht = ComplexHeatmap::Heatmap(my_mat,
-                             row_names_gp = grid::gpar(names = sample_info$sample_identifier,
-                                                       col = sample_info$color),
-                             row_names_side = "left",
-                             top_annotation = ha, cluster_rows = FALSE)
-ComplexHeatmap::draw(ht, show_heatmap_legend = FALSE)
-```
-
-Group by condition ?
-
-```{r prop_heatmap_condition, fig.width = 12, fig.height = 6}
-ht = ComplexHeatmap::Heatmap(my_mat,
-                             row_names_gp = grid::gpar(names = sample_info$sample_identifier,
-                                                       col = sample_info$color),
-                             row_names_side = "left",
-                             top_annotation = ha, cluster_rows = TRUE)
-ComplexHeatmap::draw(ht, show_heatmap_legend = FALSE)
+```{r dotplot, fig.width = 15, fig.height = 40}
+Seurat::DotPlot(sobj,
+                assay = "RNA",
+                features = features_oi,
+                group.by = "cell_group") +
+  ggplot2::coord_flip() +
+  ggplot2::scale_color_gradientn(colors = aquarius::color_gene) +
+  ggplot2::theme(axis.title.x = element_blank(),
+                 axis.title.y = element_blank(),
+                 axis.text.x = element_text(angle = 30, hjust = 1))
 ```
 
 # Save
 
-We save the Seurat object :
+We save the list of results :
 
-```{r save_sobj}
-saveRDS(sobj, file = paste0(out_dir, "/", save_name, "_sobj_reannot.rds"))
+```{r save_list_results}
+saveRDS(list_results, file = paste0(out_dir, "/", save_name, "_list_results.rds"))
 ```
 
-and the new colors :
-
-```{r save_color}
-saveRDS(manual_palette, file = paste0(out_dir, "/", save_name, "_color_manual.rds"))
-```
 
 # R Session
 
