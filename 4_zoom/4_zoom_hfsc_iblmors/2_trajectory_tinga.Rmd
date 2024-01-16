@@ -228,6 +228,11 @@ We save the Seurat object :
 saveRDS(sobj, file = paste0(out_dir, "/", save_name, "_sobj_traj_tinga.rds"))
 ```
 
+We save the trajectory object :
+
+```{r save_my_traj}
+saveRDS(my_traj, file = paste0(out_dir, "/", save_name, "_my_traj_tinga.rds"))
+```
 
 # R Session
 

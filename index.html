@@ -1,0 +1,108 @@
+<!DOCTYPE HTML>
+
+<html lang="en" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <script type="text/javascript" src="./index_layout/functions.js"> </script>
+        <link rel="stylesheet" href="./index_layout/style.css">
+        <link rel="icon" type="image/x-icon" href="./index_layout/logo/favicon.ico">
+        <title>scRNA-Seq</title>
+    </head>
+
+    <body>
+        <!--
+        # https://plaintexttools.github.io/plain-text-table/
+        ┌──────────┬───────────────┬───────────┐
+        │ top left │     title     │ top right │  # first-row
+        ├───────┬──┴───────────────┴───────────┤
+        │       │                              │
+        │       │                              │
+        │ menu  │           iframe             │
+        │       │                              │
+        │       │                              │
+        └───────┴──────────────────────────────┘
+        -->
+
+        <div class="body-container">
+
+            <!-- FIRST ROW -->
+            <div class="first-row">
+                    <!-- UPDATE BUTTON -->
+                    <div class="left-corner" id="dynamic-url">
+                        Url will be displayed there
+                    </div>
+
+                    <!-- TITLE -->
+                    <div class="title">
+                        <a href='index.html' title='Home'>Single-cell analysis</a>
+                    </div>
+
+                    <!-- GITHUB LINK -->
+                    <div class="right-corner">
+                        <a  class="github" href="https://github.com/audrey-onfroy" title="Github"></a>
+                    </div>
+            </div>
+
+            <div class="column-container">
+
+                <!-- MENU -->
+                <div class="first-column">
+                    
+                    <!-- COPY PASTE MENU THERE -->
+<ul>
+<li>1_metadata</li>
+<ul>
+<li><button id='./1_metadata/1_build_metadata.html' class='ulli_button' onClick="changeIframe('./1_metadata/1_build_metadata.html')">1_build_metadata</button></li>
+</ul>
+<li>2_individual</li>
+<ul>
+<li><button id='./2_individual/2021_31.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_31.html')">2021_31</button></li>
+<li><button id='./2_individual/2021_36.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_36.html')">2021_36</button></li>
+<li><button id='./2_individual/2021_41.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_41.html')">2021_41</button></li>
+<li><button id='./2_individual/2022_01.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_01.html')">2022_01</button></li>
+<li><button id='./2_individual/2022_02.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_02.html')">2022_02</button></li>
+<li><button id='./2_individual/2022_03.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_03.html')">2022_03</button></li>
+<li><button id='./2_individual/2022_14.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_14.html')">2022_14</button></li>
+</ul>
+<li>3_combined</li>
+<ul>
+<li><button id='./3_combined/1_combined_all.html' class='ulli_button' onClick="changeIframe('./3_combined/1_combined_all.html')">1_combined_all</button></li>
+</ul>
+<li>4_zoom/1_zoom_immune</li>
+<ul>
+<li><button id='./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html')">1_zoom_immune_dataset</button></li>
+<li><button id='./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html')">2_zoom_immune_analysis</button></li>
+</ul>
+<li>4_zoom/2_zoom_hfsc</li>
+<ul>
+<li><button id='./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html')">1_zoom_hfsc_dataset</button></li>
+<li><button id='./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html')">2_zoom_hfsc_analysis</button></li>
+</ul>
+<li>4_zoom/3_zoom_iblmors</li>
+<ul>
+<li><button id='./4_zoom/3_zoom_iblmors/1_zoom_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_iblmors/1_zoom_iblmors_dataset.html')">1_zoom_iblmors_dataset</button></li>
+<li><button id='./4_zoom/3_zoom_iblmors/2_zoom_iblmors_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_iblmors/2_zoom_iblmors_analysis.html')">2_zoom_iblmors_analysis</button></li>
+</ul>
+<li>4_zoom/4_zoom_hfsc_iblmors</li>
+<ul>
+<li><button id='./4_zoom/4_zoom_hfsc_iblmors/1_zoom_hfsc_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/1_zoom_hfsc_iblmors_dataset.html')">1_zoom_hfsc_iblmors_dataset</button></li>
+<li><button id='./4_zoom/4_zoom_hfsc_iblmors/2_trajectory_tinga.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/2_trajectory_tinga.html')">2_trajectory_tinga</button></li>
+<li><button id='./4_zoom/4_zoom_hfsc_iblmors/3_trajectory_slingshot.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/3_trajectory_slingshot.html')">3_trajectory_slingshot</button></li>
+</ul>
+<li>5_figures</li>
+<ul>
+<li><button id='./5_figures/figures.html' class='ulli_button' onClick="changeIframe('./5_figures/figures.html')">figures</button></li>
+</ul>
+</ul>
+
+
+                    <!-- (END OF) COPY PASTE MENU THERE -->
+                </div>
+
+                <!-- IFRAME -->
+                <iframe id="dynamic-iframe" class="second-column" src="./index_layout/pages/first.html"></iframe>
+            </div>
+          </div>
+    </body>
+</html>

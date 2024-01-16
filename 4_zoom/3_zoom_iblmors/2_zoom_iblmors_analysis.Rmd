@@ -143,6 +143,69 @@ This is the projection of interest :
 name2D = "harmony_20_tsne"
 ```
 
+We design a custom function to make the GSEA plot and a word cloud graph :
+
+```{r make_gsea_plot, class.source = "fold-hide"}
+make_gsea_plot = function(gsea_results, gs_oi, fold_change, metric = "FC") {
+  fold_change$metric = fold_change[, metric]
+  
+  plot_list = lapply(gs_oi, FUN = function(gene_set) {
+    # Gene set content
+    gs_content = gene_sets %>%
+      dplyr::filter(gs_name == gene_set) %>%
+      dplyr::pull(ensembl_gene) %>%
+      unique()
+    
+    # Gene set size
+    nb_genes = length(gs_content)
+    
+    # Enrichment metrics
+    NES = gsea_results@result[gene_set, "NES"]
+    p.adjust = gsea_results@result[gene_set, "p.adjust"] %>%
+      round(., 4)
+    qvalues = gsea_results@result[gene_set, "qvalues"]
+    
+    if (p.adjust > 0.05) {
+      p.adjust = paste0("<span style='color:red;'>", p.adjust, "</span>")
+    }
+    
+    my_subtitle = paste0("\nNES : ", round(NES, 2),
+                         " | padj : ", p.adjust,
+                         " | qval : ", round(qvalues, 4),
+                         " | set size : ", nb_genes, " genes")
+    
+    # Size limits
+    lower_FC = min(fold_change[gs_content, ]$metric, na.rm = TRUE)
+    upper_FC = max(fold_change[gs_content, ]$metric, na.rm = TRUE)
+    
+    # Plot
+    p = enrichplot::gseaplot2(x = gsea_results, geneSetID = gene_set) +
+      ggplot2::labs(title = gene_set,
+                    subtitle = my_subtitle) +
+      ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold",
+                                               margin = ggplot2::margin(3, 3, 5, 3)),
+                     plot.subtitle = ggtext::element_markdown(hjust = 0.5,
+                                                              size = 10))
+    
+    wc = ggplot2::ggplot(fold_change[gs_content, ],
+                         aes(label = gene_name, size = abs(metric), color = metric)) +
+      ggwordcloud::geom_text_wordcloud_area(show.legend = TRUE) +
+      ggplot2::scale_color_gradient2(
+        name = metric,
+        low = aquarius::color_cnv[1],
+        mid = "gray70", midpoint = 0,
+        high = aquarius::color_cnv[3]) +
+      ggplot2::scale_size_area(max_size = 7) +
+      ggplot2::theme_minimal() +
+      ggplot2::guides(size = "none")
+    
+    return(list(p, wc))
+  }) %>% unlist(., recursive = FALSE)
+  
+  return(plot_list)
+}
+```
+
 
 # Visualization
 
@@ -293,8 +356,44 @@ We save the results in a list :
 list_results = list()
 ```
 
+We make over-representation analysis for each group of genes. We load gene sets from MSigDB :
+
+```{r gene_sets}
+gene_sets = aquarius::get_gene_sets(species = "Homo sapiens")
+gene_sets = gene_sets$gene_sets
+
+head(gene_sets)
+```
+
+How many gene sets ?
+
+```{r count_gene_sets}
+gene_sets[, c("gs_subcat", "gs_name")] %>%
+  dplyr::distinct() %>%
+  dplyr::pull(gs_subcat) %>%
+  table() %>%
+  as.data.frame.table() %>%
+  `colnames<-`(c("Category", "Nb gene sets"))
+```
+
+We get gene name and gene ID correspondence :
+
+```{r gene_corresp}
+gene_corresp = sobj@assays[["RNA"]]@meta.features[, c("gene_name", "Ensembl_ID")] %>%
+  `colnames<-`(c("NAME", "ID")) %>%
+  dplyr::mutate(ID = as.character(ID))
+rownames(gene_corresp) = gene_corresp$ID
+
+head(gene_corresp)
+```
+
 
 ## IBL vs ORS
+
+```{r group_name_ibl_ors}
+group_name = "IBL_vs_ORS"
+```
+
 
 We change cell identities to cluster type :
 
@@ -303,6 +402,8 @@ Seurat::Idents(sobj) = sobj$cluster_type
 
 table(Seurat::Idents(sobj), sobj$sample_type)
 ```
+
+### DE
 
 We identify specific markers for each population :
 
@@ -313,7 +414,7 @@ mark = mark %>%
   dplyr::filter(p_val_adj < 0.05) %>%
   dplyr::arrange(-avg_logFC, pct.1 - pct.2)
 
-list_results[["IBL_vs_ORS"]] = mark
+list_results[[group_name]]$mark = mark
 
 dim(mark)
 head(mark, n = 20)
@@ -323,14 +424,14 @@ There are `r nrow(mark)` genes differentially expressed. How many for each popul
 
 ```{r makr_by_pop}
 # IBL
-mark %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  nrow()
+mark_ibl = mark %>%
+  dplyr::filter(avg_logFC > 0)
+nrow(mark_ibl)
 
 # ORS
-mark %>%
-  dplyr::filter(avg_logFC < 0) %>%
-  nrow()
+mark_ors = mark %>%
+  dplyr::filter(avg_logFC < 0)
+nrow(mark_ors)
 ```
 
 We represent the information on a figure :
@@ -351,7 +452,7 @@ mark_to_label = rbind(
 ggplot2::ggplot(mark, aes(x = pct.1, y = pct.2, col = avg_logFC)) +
   ggplot2::geom_abline(slope = 1, intercept = 0, lty = 2) +
   ggplot2::geom_point() +
-  ggrepel::geom_label_repel(data = mark_to_label,
+  ggrepel::geom_label_repel(data = mark_to_label, max.overlaps = Inf,
                             aes(x = pct.1, y = pct.2, label = gene_name),
                             col = "black", fill = NA, size = 3, label.size = NA) +
   ggplot2::labs(title = "Differentially expressed genes",
@@ -386,10 +487,98 @@ plot_list = lapply(mark_to_label$gene_name, FUN = function(gene) {
 patchwork::wrap_plots(plot_list, ncol = 5)
 ```
 
-
 On the figure, we can see that some specific markers for a population are indeed specific to a sample type rather than the whole population.
 
+### IBL
+
+We explore enrichment in gene sets for IBL population
+
+```{r ora_ibl, fig.width = 12, fig.height = 6}
+genes_of_interest = rownames(mark_ibl)
+
+enrichr_results = aquarius::run_enrichr(gene_names = genes_of_interest,
+                                        gene_corresp = gene_corresp,
+                                        gene_sets = gene_sets[, c("gs_name", "ensembl_gene")],
+                                        make_plot = TRUE,
+                                        plot_title = "Up-regulated in IBL compared to ORS")
+
+list_results[[group_name]]$enrichr_ibl = enrichr_results$ego
+
+enrichr_results$plot +
+  ggplot2::theme(axis.text.y = element_text(size = 8))
+```
+
+### ORS
+
+We explore enrichment in gene sets for ORS population.
+
+```{r ora_ors, fig.width = 12, fig.height = 6}
+genes_of_interest = rownames(mark_ors)
+
+enrichr_results = aquarius::run_enrichr(gene_names = genes_of_interest,
+                                        gene_corresp = gene_corresp,
+                                        gene_sets = gene_sets[, c("gs_name", "ensembl_gene")],
+                                        make_plot = TRUE,
+                                        plot_title = "Up-regulated in ORS compared to IBL")
+
+list_results[[group_name]]$enrichr_ors = enrichr_results$ego
+
+enrichr_results$plot +
+  ggplot2::theme(axis.text.y = element_text(size = 8))
+```
+
+
+### GSEA
+
+We run a GSEA for all gene sets, from the full count matrix :
+
+```{r gsea_ibl_ors, fig.width = 12, fig.height = 40}
+ranked_gene_list = aquarius::run_foldchange(Seurat::GetAssayData(sobj, assay = "RNA", slot = "counts"),
+                                            group1 = colnames(sobj)[sobj@active.ident %in% "IBL"],
+                                            group2 = colnames(sobj)[sobj@active.ident %in% "ORS"])
+names(ranked_gene_list) = gene_corresp$ID
+
+gsea_results = aquarius::gsea_run(ranked_gene_list = ranked_gene_list,
+                                  gene_sets = gene_sets[, c("gs_name", "ensembl_gene")],
+                                  GSEA_p_val_thresh = 1)
+
+list_results[[group_name]]$gsea = gsea_results
+
+gsea_results@result %>%
+  dplyr::filter(pvalue < 0.05) %>%
+  dplyr::top_n(., n = 200, wt = abs(NES)) %>%
+  dplyr::mutate(too_long = ifelse(nchar(ID) > 60, yes = TRUE, no = FALSE)) %>%
+  dplyr::mutate(ID = stringr::str_sub(ID, end = 60)) %>%
+  dplyr::mutate(ID = ifelse(too_long, yes = paste0(ID, "..."), no = ID)) %>%
+  aquarius::gsea_plot(show_legend = TRUE) +
+  ggplot2::labs(title = "GSEA using all genes (count matrix)") +
+  ggplot2::theme(plot.title = element_text(size = 20))
+```
+
+We make the gsea plot for two gene sets :
+
+```{r gsea_plot_ibl_ors, fig.width = 15, fig.height = 7}
+p1 = enrichplot::gseaplot2(x = gsea_results, geneSetID = "REACTOME_KERATINIZATION") +
+  ggplot2::labs(title = "REACTOME_KERATINIZATION") +
+  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold",
+                                           margin = ggplot2::margin(3, 3, 5, 3)))
+
+p2 = enrichplot::gseaplot2(x = gsea_results, geneSetID = "HALLMARK_INTERFERON_GAMMA_RESPONSE") +
+  ggplot2::labs(title = "HALLMARK_INTERFERON_GAMMA_RESPONSE") +
+  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold",
+                                           margin = ggplot2::margin(3, 3, 5, 3)))
+
+p1 | p2
+```
+
+Maybe those gene sets are specific to sample type rather than the whole cell population.
+
 ## Cluster 5 within ORS
+
+```{r group_name_cluster_5}
+group_name = "cluster5_vs_ORS"
+```
+
 
 We subset the Seurat object and change cell identities to sample type.
 
@@ -401,6 +590,8 @@ Seurat::Idents(subsobj) = subsobj$seurat_clusters
 table(subsobj$seurat_clusters)
 ```
 
+### DE
+
 We identify specific markers for each population :
 
 ```{r de_clust5, fig.width = 5, fig.height = 5}
@@ -410,7 +601,7 @@ mark = mark %>%
   dplyr::filter(p_val_adj < 0.05) %>%
   dplyr::arrange(-avg_logFC, pct.1 - pct.2)
 
-list_results[["cluster5_vs_ORS"]] = mark
+list_results[[group_name]]$mark = mark
 
 dim(mark)
 head(mark, n = 20)
@@ -420,21 +611,21 @@ There are `r nrow(mark)` genes differentially expressed. How many for each popul
 
 ```{r mark_cluster5}
 # Cluster 5
-mark %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  nrow()
+mark_cluster5 = mark %>%
+  dplyr::filter(avg_logFC > 0)
+nrow(mark_cluster5)
 
 # Other ORS
-mark %>%
-  dplyr::filter(avg_logFC < 0) %>%
-  nrow()
+mark_not5 = mark %>%
+  dplyr::filter(avg_logFC < 0)
+nrow(mark_not5)
 ```
 
 We represent the information on a figure :
 
 ```{r plot_de_cluster5, fig.width = 10, fig.height = 10}
 mark$gene_name = rownames(mark)
-mark_cluster5 = rbind(
+mark_signif = rbind(
   # up-regulated in cluster 5
   mark %>% dplyr::top_n(., n = 20, wt = avg_logFC),
   # up-regulated in other ORS
@@ -448,7 +639,7 @@ mark_cluster5 = rbind(
 ggplot2::ggplot(mark, aes(x = pct.1, y = pct.2, col = avg_logFC)) +
   ggplot2::geom_abline(slope = 1, intercept = 0, lty = 2) +
   ggplot2::geom_point() +
-  ggrepel::geom_label_repel(data = mark_cluster5,
+  ggrepel::geom_label_repel(data = mark_signif, max.overlaps = Inf,
                             aes(x = pct.1, y = pct.2, label = gene_name),
                             col = "black", fill = NA, size = 3, label.size = NA) +
   ggplot2::labs(title = "Differentially expressed genes",
@@ -461,6 +652,8 @@ ggplot2::ggplot(mark, aes(x = pct.1, y = pct.2, col = avg_logFC)) +
   ggplot2::theme(plot.title = element_text(hjust = 0.5),
                  plot.subtitle = element_text(hjust = 0.5))
 ```
+
+### Heatmap
 
 We represent a subset of genes on a heatmap :
 
@@ -522,7 +715,114 @@ ComplexHeatmap::draw(ht,
 ```
 
 
+### Up-regulated in cluster 5
+
+We explore enrichment in gene sets for cluster 5.
+
+```{r ora_cluster5_up, fig.width = 12, fig.height = 6}
+genes_of_interest = rownames(mark_cluster5)
+
+enrichr_results = aquarius::run_enrichr(gene_names = genes_of_interest,
+                                        gene_corresp = gene_corresp,
+                                        gene_sets = gene_sets[, c("gs_name", "ensembl_gene")],
+                                        make_plot = TRUE,
+                                        plot_title = "Up-regulated in cluster 5 compared to other ORS")
+
+list_results[[group_name]]$enrichr_up = enrichr_results$ego
+
+enrichr_results$plot +
+  ggplot2::theme(axis.text.y = element_text(size = 8))
+```
+
+### Down-regulated in cluster 5
+
+We explore enrichment in gene sets for genes downregulated in cluster 5.
+
+```{r ora_cluster5_dn, fig.width = 12, fig.height = 6}
+genes_of_interest = rownames(mark_not5)
+
+enrichr_results = aquarius::run_enrichr(gene_names = genes_of_interest,
+                                        gene_corresp = gene_corresp,
+                                        gene_sets = gene_sets[, c("gs_name", "ensembl_gene")],
+                                        make_plot = TRUE,
+                                        plot_title = "Down-regulated in cluster 5 compared to other ORS")
+
+list_results[[group_name]]$enrichr_dn = enrichr_results$ego
+
+enrichr_results$plot +
+  ggplot2::theme(axis.text.y = element_text(size = 8))
+```
+
+
+### GSEA
+
+We run a GSEA for all gene sets, from the full count matrix :
+
+```{r gsea_cluster5, fig.width = 12, fig.height = 40}
+ranked_gene_list = aquarius::run_foldchange(Seurat::GetAssayData(subsobj, assay = "RNA", slot = "counts"),
+                                            group1 = colnames(subsobj)[subsobj@active.ident == 5],
+                                            group2 = colnames(subsobj)[subsobj@active.ident != 5])
+names(ranked_gene_list) = gene_corresp$ID
+
+gsea_results = aquarius::gsea_run(ranked_gene_list = ranked_gene_list,
+                                  gene_sets = gene_sets[, c("gs_name", "ensembl_gene")],
+                                  GSEA_p_val_thresh = 1)
+
+list_results[[group_name]]$gsea = gsea_results
+
+gsea_results@result %>%
+  dplyr::filter(pvalue < 0.05) %>%
+  dplyr::top_n(., n = 200, wt = abs(NES)) %>%
+  dplyr::mutate(too_long = ifelse(nchar(ID) > 60, yes = TRUE, no = FALSE)) %>%
+  dplyr::mutate(ID = stringr::str_sub(ID, end = 60)) %>%
+  dplyr::mutate(ID = ifelse(too_long, yes = paste0(ID, "..."), no = ID)) %>%
+  aquarius::gsea_plot(show_legend = TRUE) +
+  ggplot2::labs(title = "GSEA using all genes (count matrix)") +
+  ggplot2::theme(plot.title = element_text(size = 20))
+```
+
+We compute a fold change table to make a wordcloud :
+
+```{r fold_change_cluster5}
+fold_change = gene_corresp
+colnames(fold_change) = c("gene_name", "ID")
+rownames(fold_change) = fold_change$ID
+fold_change$FC = ranked_gene_list[rownames(fold_change)]
+fold_change$pct.1 = Seurat::GetAssayData(subsobj, assay = "RNA", slot = "counts")[, subsobj@active.ident == "5"] %>%
+  apply(., MARGIN = 1, FUN = function(one_row) {
+    return( mean(one_row != 0) )
+  })
+fold_change$pct.2 = Seurat::GetAssayData(subsobj, assay = "RNA", slot = "counts")[, subsobj@active.ident != "5"] %>%
+  apply(., MARGIN = 1, FUN = function(one_row) {
+    return( mean(one_row != 0) )
+  })
+fold_change$FC_x_pct = ifelse(fold_change$FC > 0,
+                              yes = fold_change$FC * fold_change$pct.1,
+                              no = fold_change$FC * fold_change$pct.2)
+
+dim(fold_change) ; head(fold_change)
+```
+
+We make the gsea plot for some gene sets :
+
+```{r gsea_plot_cluster5, fig.width = 12, fig.height = 20}
+gs_oi = c("GOBP_CD4_POSITIVE_ALPHA_BETA_T_CELL_DIFFERENTIATION",
+          "GOBP_REGULATION_OF_ALPHA_BETA_T_CELL_DIFFERENTIATION",
+          "GOBP_ALPHA_BETA_T_CELL_DIFFERENTIATION",
+          "GOBP_POSITIVE_REGULATION_OF_ALPHA_BETA_T_CELL_ACTIVATION",
+          "GOBP_ALPHA_BETA_T_CELL_ACTIVATION")
+
+plot_list = make_gsea_plot(gsea_results, gs_oi, fold_change, "FC_x_pct")
+
+patchwork::wrap_plots(plot_list, ncol = 2, widths = c(2,1.5))
+```
+
 ## IBL : HS vs HD
+
+```{r group_name_ibl}
+group_name = "IBL_HS_vs_HD"
+```
+
 
 We subset the Seurat object and change cell identities to sample type.
 
@@ -533,6 +833,8 @@ Seurat::Idents(subsobj) = subsobj$sample_type
 table(subsobj$sample_type)
 ```
 
+### DE
+
 We identify DE genes between HS and HD :
 
 ```{r de_ibl, fig.width = 5, fig.height = 5}
@@ -542,13 +844,126 @@ mark = mark %>%
   dplyr::filter(p_val_adj < 0.05) %>%
   dplyr::arrange(-avg_logFC, pct.1 - pct.2)
 
-list_results[["IBL_HS_vs_HD"]] = mark
+list_results[[group_name]]$mark = mark
 
 dim(mark)
 head(mark, n = 20)
 ```
 
+
+### Up in HS
+
+We explore enrichment in gene sets for HS population.
+
+```{r ora_ibl_hs, fig.width = 12, fig.height = 6}
+genes_of_interest = mark %>%
+  dplyr::filter(avg_logFC > 0) %>%
+  rownames()
+
+enrichr_results = aquarius::run_enrichr(gene_names = genes_of_interest,
+                                        gene_corresp = gene_corresp,
+                                        gene_sets = gene_sets[, c("gs_name", "ensembl_gene")],
+                                        make_plot = TRUE,
+                                        plot_title = "Up-regulated in HS compared to HD")
+
+list_results[[group_name]]$enrichr_hs = enrichr_results$ego
+
+enrichr_results$plot +
+  ggplot2::theme(axis.text.y = element_text(size = 8))
+```
+
+### Up in HD
+
+We explore enrichment in gene sets for HD population.
+
+```{r ora_ibl_hd, fig.width = 12, fig.height = 6}
+genes_of_interest = mark %>%
+  dplyr::filter(avg_logFC < 0) %>%
+  rownames()
+
+enrichr_results = aquarius::run_enrichr(gene_names = genes_of_interest,
+                                        gene_corresp = gene_corresp,
+                                        gene_sets = gene_sets[, c("gs_name", "ensembl_gene")],
+                                        make_plot = TRUE,
+                                        plot_title = "Down-regulated in HS compared to HD")
+
+list_results[[group_name]]$enrichr_hd = enrichr_results$ego
+
+enrichr_results$plot +
+  ggplot2::theme(axis.text.y = element_text(size = 8))
+```
+
+
+### GSEA
+
+We run a GSEA for all gene sets, from the full count matrix :
+
+```{r gsea_in_ibl, fig.width = 12, fig.height = 40}
+ranked_gene_list = aquarius::run_foldchange(Seurat::GetAssayData(subsobj, assay = "RNA", slot = "counts"),
+                                            group1 = colnames(subsobj)[subsobj@active.ident %in% "HS"],
+                                            group2 = colnames(subsobj)[subsobj@active.ident %in% "HD"])
+names(ranked_gene_list) = gene_corresp$ID
+
+gsea_results = aquarius::gsea_run(ranked_gene_list = ranked_gene_list,
+                                  gene_sets = gene_sets[, c("gs_name", "ensembl_gene")],
+                                  GSEA_p_val_thresh = 1)
+
+list_results[[group_name]]$gsea = gsea_results
+
+gsea_results@result %>%
+  dplyr::filter(pvalue < 0.05) %>%
+  dplyr::top_n(., n = 200, wt = abs(NES)) %>%
+  dplyr::mutate(too_long = ifelse(nchar(ID) > 60, yes = TRUE, no = FALSE)) %>%
+  dplyr::mutate(ID = stringr::str_sub(ID, end = 60)) %>%
+  dplyr::mutate(ID = ifelse(too_long, yes = paste0(ID, "..."), no = ID)) %>%
+  aquarius::gsea_plot(show_legend = TRUE) +
+  ggplot2::labs(title = "GSEA using all genes (count matrix)") +
+  ggplot2::theme(plot.title = element_text(size = 20))
+```
+
+We compute a fold change table to make a wordcloud :
+
+```{r fold_change_ibl}
+fold_change = gene_corresp
+colnames(fold_change) = c("gene_name", "ID")
+rownames(fold_change) = fold_change$ID
+fold_change$FC = ranked_gene_list[rownames(fold_change)]
+fold_change$pct.1 = Seurat::GetAssayData(subsobj, assay = "RNA", slot = "counts")[, subsobj@active.ident == "HS"] %>%
+  apply(., MARGIN = 1, FUN = function(one_row) {
+    return( mean(one_row != 0) )
+  })
+fold_change$pct.2 = Seurat::GetAssayData(subsobj, assay = "RNA", slot = "counts")[, subsobj@active.ident == "HD"] %>%
+  apply(., MARGIN = 1, FUN = function(one_row) {
+    return( mean(one_row != 0) )
+  })
+fold_change$FC_x_pct = ifelse(fold_change$FC > 0,
+                              yes = fold_change$FC * fold_change$pct.1,
+                              no = fold_change$FC * fold_change$pct.2)
+
+dim(fold_change) ; head(fold_change)
+```
+
+We make the gsea plot for some gene sets :
+
+```{r gsea_plot_within_ibl, fig.width = 12, fig.height = 25}
+gs_oi = c("REACTOME_EXPORT_OF_VIRAL_RIBONUCLEOPROTEINS_FROM_NUCLEUS",
+          "GOBP_MICROTUBULE_ANCHORING",
+          "GOBP_HISTONE_H3_K4_TRIMETHYLATION",
+          "GOBP_HISTONE_H3_K4_MONOMETHYLATION",
+          "GOBP_MITOPHAGY",
+          "REACTOME_SEROTONIN_NEUROTRANSMITTER_RELEASE_CYCLE",
+          "REACTOME_DOPAMINE_NEUROTRANSMITTER_RELEASE_CYCLE")
+
+plot_list = make_gsea_plot(gsea_results, gs_oi, fold_change, "FC_x_pct")
+
+patchwork::wrap_plots(plot_list, ncol = 2, widths = c(2,1.5))
+```
+
 ## ORS : HS vs HD
+
+```{r group_name_ors}
+group_name = "ORS_HS_vs_HD"
+```
 
 We subset the Seurat object and change cell identities to sample type.
 
@@ -559,6 +974,8 @@ Seurat::Idents(subsobj) = subsobj$sample_type
 table(subsobj$sample_type)
 ```
 
+### DE
+
 We identify DE genes between HS and HD :
 
 ```{r de_ors, fig.width = 5, fig.height = 5}
@@ -568,27 +985,136 @@ mark = mark %>%
   dplyr::filter(p_val_adj < 0.05) %>%
   dplyr::arrange(-avg_logFC, pct.1 - pct.2)
 
-list_results[["ORS_HS_vs_HD"]] = mark
+list_results[[group_name]]$mark = mark
 
 dim(mark)
 head(mark, n = 20)
 ```
 
 
-# Heatmap
+### Up in HS
 
-We represent differentially expressed genes. First, we extract all DE genes :
+We explore enrichment in gene sets for HS population.
+
+```{r ora_ors_hs, fig.width = 12, fig.height = 6}
+genes_of_interest = mark %>%
+  dplyr::filter(avg_logFC > 0) %>%
+  rownames()
+
+enrichr_results = aquarius::run_enrichr(gene_names = genes_of_interest,
+                                        gene_corresp = gene_corresp,
+                                        gene_sets = gene_sets[, c("gs_name", "ensembl_gene")],
+                                        make_plot = TRUE,
+                                        plot_title = "Up-regulated in HS compared to HD")
+
+list_results[[group_name]]$enrichr_hs = enrichr_results$ego
+
+enrichr_results$plot +
+  ggplot2::theme(axis.text.y = element_text(size = 8))
+```
+
+### Up in HD
+
+We explore enrichment in gene sets for HD population.
+
+```{r ora_ors_hd, fig.width = 12, fig.height = 6}
+genes_of_interest = mark %>%
+  dplyr::filter(avg_logFC < 0) %>%
+  rownames()
+
+enrichr_results = aquarius::run_enrichr(gene_names = genes_of_interest,
+                                        gene_corresp = gene_corresp,
+                                        gene_sets = gene_sets[, c("gs_name", "ensembl_gene")],
+                                        make_plot = TRUE,
+                                        plot_title = "Down-regulated in HS compared to HD")
+
+list_results[[group_name]]$enrichr_hd = enrichr_results$ego
+
+enrichr_results$plot +
+  ggplot2::theme(axis.text.y = element_text(size = 8))
+```
+
+
+### GSEA
+
+We run a GSEA for all gene sets, from the full count matrix :
+
+```{r gsea_in_ors, fig.width = 12, fig.height = 40}
+ranked_gene_list = aquarius::run_foldchange(Seurat::GetAssayData(subsobj, assay = "RNA", slot = "counts"),
+                                            group1 = colnames(subsobj)[subsobj@active.ident %in% "HS"],
+                                            group2 = colnames(subsobj)[subsobj@active.ident %in% "HD"])
+names(ranked_gene_list) = gene_corresp$ID
+
+gsea_results = aquarius::gsea_run(ranked_gene_list = ranked_gene_list,
+                                  gene_sets = gene_sets[, c("gs_name", "ensembl_gene")],
+                                  GSEA_p_val_thresh = 1)
+
+list_results[[group_name]]$gsea = gsea_results
+
+gsea_results@result %>%
+  dplyr::filter(pvalue < 0.05) %>%
+  dplyr::top_n(., n = 200, wt = abs(NES)) %>%
+  dplyr::mutate(too_long = ifelse(nchar(ID) > 60, yes = TRUE, no = FALSE)) %>%
+  dplyr::mutate(ID = stringr::str_sub(ID, end = 60)) %>%
+  dplyr::mutate(ID = ifelse(too_long, yes = paste0(ID, "..."), no = ID)) %>%
+  aquarius::gsea_plot(show_legend = TRUE) +
+  ggplot2::labs(title = "GSEA using all genes (count matrix)") +
+  ggplot2::theme(plot.title = element_text(size = 20))
+```
+
+We compute a fold change table to make a wordcloud :
+
+```{r fold_change_ors}
+fold_change = gene_corresp
+colnames(fold_change) = c("gene_name", "ID")
+rownames(fold_change) = fold_change$ID
+fold_change$FC = ranked_gene_list[rownames(fold_change)]
+fold_change$pct.1 = Seurat::GetAssayData(subsobj, assay = "RNA", slot = "counts")[, subsobj@active.ident == "HS"] %>%
+  apply(., MARGIN = 1, FUN = function(one_row) {
+    return( mean(one_row != 0) )
+  })
+fold_change$pct.2 = Seurat::GetAssayData(subsobj, assay = "RNA", slot = "counts")[, subsobj@active.ident == "HD"] %>%
+  apply(., MARGIN = 1, FUN = function(one_row) {
+    return( mean(one_row != 0) )
+  })
+fold_change$FC_x_pct = ifelse(fold_change$FC > 0,
+                              yes = fold_change$FC * fold_change$pct.1,
+                              no = fold_change$FC * fold_change$pct.2)
+
+dim(fold_change) ; head(fold_change)
+```
+
+We make the gsea plot for some gene sets :
+
+```{r gsea_plot_within_ors, fig.width = 12, fig.height = 35}
+gs_oi = c("GOBP_RESPONSE_TO_MOLECULE_OF_BACTERIAL_ORIGIN",
+          "GOBP_HUMORAL_IMMUNE_RESPONSE",
+          "HALLMARK_APOPTOSIS",
+          "GOBP_GRANULOCYTE_CHEMOTAXIS",
+          "GOBP_GRANULOCYTE_MIGRATION",
+          "HALLMARK_INTERFERON_ALPHA_RESPONSE",
+          "HALLMARK_INTERFERON_GAMMA_RESPONSE",
+          "HALLMARK_TNFA_SIGNALING_VIA_NFKB",
+          "HALLMARK_HYPOXIA",
+          "GOBP_RESPONSE_TO_TRANSFORMING_GROWTH_FACTOR_BETA")
+
+plot_list = make_gsea_plot(gsea_results, gs_oi, fold_change, "FC_x_pct")
+
+patchwork::wrap_plots(plot_list, ncol = 2, widths = c(2,1.5))
+```
+
+# Global heatmap
+
+We represent all differentially expressed genes on a heatmap. First, we extract all DE genes :
 
 ```{r prep_genes}
 features_oi = c(mark_to_label$gene_name,
-                rownames(list_results$IBL_HS_vs_HD),
-                rownames(list_results$ORS_HS_vs_HD)) %>%
+                rownames(list_results$IBL_HS_vs_HD$mark),
+                rownames(list_results$ORS_HS_vs_HD$mark)) %>%
   unique()
 
 length(features_oi)
 ```
-
-## Heatmap
 
 We prepare the scaled expression matrix :
 
