@@ -28,7 +28,7 @@ body, html {
 
 .first-row {
   /* height: 10%; */
-  background-color: rgb(51,122,183);
+  background-color: rgb(27, 109, 34);
   color: white;
   padding: 0px 4px 0px 4px;
   /* margin: 0px 15px 0px 10px; */
@@ -137,7 +137,7 @@ button {
 /* List item */
 ul, li {
   list-style-type: none;
-  color: rgb(51,122,183);
+  color: rgb(27, 109, 34);
   font-weight: bold;
 }
 

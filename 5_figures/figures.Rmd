@@ -629,6 +629,7 @@ Seurat::DimPlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
   Seurat::NoAxes() + Seurat::NoLegend()
 ```
 
+
 Violin plot of IL1B in macrophages :
 
 ```{r fig_ic_mac_il1b, fig.width = 4, fig.height = 4}
@@ -642,6 +643,55 @@ il1b_hs_VS_il1b_hd
 
 Seurat::VlnPlot(subsobj, group.by = "sample_type",
                 features = "IL1B", cols = sample_type_colors) +
+  ggplot2::theme(axis.title.x = element_blank(),
+                 legend.position = "none")
+```
+
+Split by sample :
+
+```{r fig_ic_mac_il1b_split, fig.width = 6, fig.height = 4}
+Seurat::VlnPlot(subsobj, group.by = "sample_identifier",
+                features = "IL1B", cols = sample_info$color) +
+  ggplot2::theme(axis.title.x = element_blank(),
+                 legend.position = "none")
+```
+
+Violin plot of IL1B in macrophages :
+
+```{r fig_ic_mac_il6, fig.width = 4, fig.height = 4}
+il6_hs = subsobj@assays$RNA@data["IL6", subsobj$sample_type == "HS"]
+il6_hd = subsobj@assays$RNA@data["IL6", subsobj$sample_type == "HD"]
+il6_hs_VS_il6_hd = stats::t.test(il6_hs, il6_hd)
+il6_hs_VS_il6_hd
+
+Seurat::VlnPlot(subsobj, group.by = "sample_type",
+                features = "IL6", cols = sample_type_colors) +
+  ggplot2::theme(axis.title.x = element_blank(),
+                 legend.position = "none")
+```
+
+Violin plot of IL1B in macrophages :
+
+```{r fig_ic_mac_tnf, fig.width = 4, fig.height = 4}
+subsobj = subset(sobj_ic, seurat_clusters == 2)
+table(subsobj$sample_type)
+
+tnf_hs = subsobj@assays$RNA@data["TNF", subsobj$sample_type == "HS"]
+tnf_hd = subsobj@assays$RNA@data["TNF", subsobj$sample_type == "HD"]
+tnf_hs_VS_tnf_hd = stats::t.test(tnf_hs, tnf_hd)
+tnf_hs_VS_tnf_hd
+
+Seurat::VlnPlot(subsobj, group.by = "sample_type",
+                features = "TNF", cols = sample_type_colors) +
+  ggplot2::theme(axis.title.x = element_blank(),
+                 legend.position = "none")
+```
+
+Split by sample :
+
+```{r fig_ic_mac_tnf_split, fig.width = 6, fig.height = 4}
+Seurat::VlnPlot(subsobj, group.by = "sample_identifier",
+                features = "TNF", cols = sample_info$color) +
   ggplot2::theme(axis.title.x = element_blank(),
                  legend.position = "none")
 ```
@@ -946,6 +996,27 @@ plot_list = lapply(c(1:length(genes)), FUN = function(gene_id) {
                    legend.text = element_text(size = 15),
                    legend.position = "none") +
     Seurat::NoAxes()
+})
+
+plot_list
+```
+
+```{r fig_hfsc_genes_split, fig.width = 7, fig.height = 4}
+plot_list = lapply(c("IFITM3", "MIF", "DDIT4"), FUN = function(one_gene) {
+  p = aquarius::plot_split_dimred(sobj_hfsc,
+                                  reduction = name2D,
+                                  split_by = "sample_type",
+                                  color_by = one_gene,
+                                  color_palette = viridis::viridis(n = 10),
+                                  main_pt_size = 0.6,
+                                  bg_pt_size = 0.6,
+                                  order = TRUE,
+                                  bg_color = "gray95")
+  p = patchwork::wrap_plots(p, nrow = 1) +
+    patchwork::plot_layout(guides = "collect") +
+    ggplot2::theme(legend.position = "right") &
+    ggplot2::theme(plot.subtitle = element_blank())
+  return(p)
 })
 
 plot_list
@@ -1355,27 +1426,39 @@ list_results$ORS_HS_vs_HD$gsea@result %>%
 
 Violin plot for IBL :
 
-```{r fig_iblors_ibl, fig.width = 12, fig.height = 4}
+```{r fig_iblors_ibl, fig.width = 10, fig.height = 8}
 subsobj = subset(sobj_iblors, cluster_type == "IBL")
 
 Seurat::VlnPlot(subsobj, group.by = "sample_type",
-                features = c("DUSP1", "DDIT4", "MIF", "S100A9"),
-                cols = sample_type_colors, ncol = 4) &
+                features = c("DUSP1", "DDIT4", "MIF", "LGALS7", "ARF5", "S100A9"),
+                cols = sample_type_colors, ncol = 3) &
   ggplot2::theme(axis.title.x = element_blank(),
                  legend.position = "none")
 ```
 
 Violin plot for ORS :
 
-```{r fig_iblors_ors, fig.width = 12, fig.height = 4}
+```{r fig_iblors_ors, fig.width = 12, fig.height = 8}
 subsobj = subset(sobj_iblors, cluster_type == "ORS")
 
 Seurat::VlnPlot(subsobj, group.by = "sample_type",
-                features = c("DUSP1", "CLDN1", "CCL2", "S100A9"),
+                features = c("DUSP1", "CLDN1", "KLF6", "CTGF", "CCL2", "S100A9", "IFI27", "IFITM3"),
                 cols = sample_type_colors, ncol = 4) &
   ggplot2::theme(axis.title.x = element_blank(),
                  legend.position = "none")
 ```
+
+Split by sample :
+
+```{r fig_iblors_ors_split, fig.width = 6, fig.height = 4}
+Seurat::VlnPlot(subsobj, group.by = "sample_identifier",
+                features = "IFI27", cols = sample_info$color) +
+  ggplot2::theme(axis.title.x = element_blank(),
+                 legend.position = "none")
+```
+
+
+
 
 Dotplot of DE genes in ORS, between cluster 5 and other ORS :
 
@@ -1500,7 +1583,8 @@ ComplexHeatmap::draw(ht,
 Genes of interest :
 
 ```{r fig_iblors_genes, fig.width = 2, fig.height = 2}
-genes = c("KRT16", "COL17A1", "DST", "KRT6B", "IL1R2", "WNT3")
+genes = c("KRT16", "COL17A1", "DST", "KRT6B", "IL1R2", "WNT3",
+          "IFI27", "CXCL14", "IGFBP3", "KRT15", "CD200")
 
 plot_list = lapply(c(1:length(genes)), FUN = function(gene_id) {
   gene = genes[[gene_id]]
