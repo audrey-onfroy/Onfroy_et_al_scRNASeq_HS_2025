@@ -508,6 +508,7 @@ ht = ComplexHeatmap::Heatmap(cluster_by_sample,
 ComplexHeatmap::draw(ht, merge_legends = TRUE)
 ```
 
+
 Dotplot :
 
 ```{r fig1_dotplot, fig.width = 6.5, fig.height = 7, class.source = "fold-hide"}
@@ -555,12 +556,43 @@ p = ggplot2::ggplot(custom_order_cell_type, aes(x = cell_type, y = 0)) +
 plot_list = patchwork::wrap_plots(plot_list, p,
                                   ncol = 1, heights = c(25, 1))
 plot_list
-
-
-
-
-
 ```
+
+Dotplot with same genes as in Jin *et al.* (2023) ([https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10710069/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10710069/)) :
+
+
+```{r jin, fig.width = 15, fig.height = 7, class.source = "fold-hide"}
+subsobj = subset(sobj, (cluster_family == "non matrix"))
+subsobj
+
+subsobj$cluster_type_sample_type = paste0(subsobj$cluster_type, "_", subsobj$sample_identifier)
+
+Seurat::DotPlot(subsobj,
+                features = c("DKK3", "SFRP1", "WNT3", "WNT4", "CCND1",
+                             "CSNK1A1", "CSNK2A1", "CTNNB1", "CTNNBIP1",
+                             "DAAM1", "GSK3B", "RHOA",
+                             "FOS", "ID1", "JUN", "MYC", "SMAD1", "SOX4",
+                             "JAG1", "JAG2", "NOTCH1", "NOTCH2", "NOTCH3", "PSENEN",
+                             "GAS1", "FKBP6"),
+                group.by = "cluster_type_sample_type") +
+  ggplot2::coord_flip() +
+  ggplot2::scale_color_gradientn(colors = aquarius::color_cnv) +
+  ggplot2::theme(legend.position = "right",
+                 legend.box = "vertical",
+                 axis.title = element_blank(),
+                 axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Immune cells
