@@ -1,0 +1,264 @@
+---
+title: "HS project (ANR)"
+subtitle: "Figures bulk"
+author: "Audrey"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    code_folding: show
+    code_download: true
+    toc: true
+    toc_float: true
+    number_sections: false
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+<!-- Automatically computes and prints in the output the running time for any code chunk -->
+```{r, echo=FALSE}
+# https://github.com/rstudio/rmarkdown/issues/1453
+hooks = knitr::knit_hooks$get()
+hook_foldable = function(type) {
+  force(type)
+  function(x, options) {
+    res = hooks[[type]](x, options)
+    
+    if (isFALSE(options[[paste0("fold_", type)]])) return(res)
+    
+    paste0(
+      "<details><summary>", "show", "</summary>\n\n",
+      res,
+      "\n\n</details>"
+    )
+  }
+}
+knitr::knit_hooks$set(
+  output = hook_foldable("output"),
+  plot = hook_foldable("plot"),
+  time_it = local({
+    now = NULL
+    function(before, options) {
+      if (options$time_it) {
+        if (before) {
+          now <= Sys.time()
+        } else {
+          res = difftime(Sys.time(), now, units = "secs")
+          paste("(Time to run :", round(res, digits = 2), "s)")
+        }
+      }
+    }
+  })
+)
+```
+
+<!-- Set default parameters for all chunks -->
+```{r, setup, include = FALSE}
+set.seed(1337L)
+knitr::opts_chunk$set(echo = TRUE, # display code
+                      # display chunk output
+                      message = FALSE,
+                      warning = FALSE,
+                      fold_output = FALSE, # useful for sessionInfo()
+                      fold_plot = FALSE,
+                      
+                      # figure settings
+                      fig.align = 'center',
+                      fig.width = 20,
+                      fig.height = 15,
+                      
+                      # something about seed, chunk and Rmarkdown compilation
+                      # https://stackoverflow.com/questions/39417003/long-vectors-not-supported-yet-error-in-rmd-but-not-in-r-script
+                      # cache = TRUE,
+                      cache.lazy = FALSE, 
+                      
+                      # add runtime after chunk
+                      time_it = FALSE)
+```
+
+
+This file is used to prepare the figures for the project.
+
+```{r library}
+library(dplyr)
+library(patchwork)
+library(ggplot2)
+library(ComplexHeatmap)
+library(org.Mm.eg.db)
+
+.libPaths()
+```
+
+# Load data
+
+```{r load_data}
+res = openxlsx::read.xlsx("/home/nf1/Downloads/DEG_signif_HighvsNeg.xlsx")
+head(res)
+```
+
+# Volcano plot
+
+We make a volcano plot :
+
+```{r volcano, fig.width = 8, fig.height = 6}
+pval_thresh = 0.01
+fc_thresh = 1
+
+res = res %>%
+  dplyr::mutate(col = case_when(log2FoldChange > fc_thresh & padj < pval_thresh ~ "red",
+                                log2FoldChange < -fc_thresh & padj < pval_thresh ~ "red",
+                                padj < pval_thresh ~ "blue",
+                                log2FoldChange > fc_thresh & padj > pval_thresh ~ "green",
+                                log2FoldChange < fc_thresh & padj > pval_thresh ~ "green",
+                                padj > pval_thresh ~ "gray60"))
+
+ggplot2::ggplot(res, aes(x = log2FoldChange, y = -log10(padj), col = col)) +
+  ggplot2::geom_hline(yintercept = -log10(pval_thresh), lty = 2, color = "gray50") +
+  ggplot2::geom_vline(xintercept = -fc_thresh, lty = 2, color = "gray50") +
+  ggplot2::geom_vline(xintercept = fc_thresh, lty = 2, color = "gray50") +
+  ggplot2::geom_point() +
+  ggrepel::geom_label_repel(data = res[res$padj < pval_thresh & abs(res$log2FoldChange) > fc_thresh,],
+                            aes(x = log2FoldChange, y = -log10(padj), label = X1),
+                            col = "black", fill = NA, size = 4, label.size = NA, max.overlaps = 20) +
+  ggplot2::labs(title = "Volcano Plot",
+                subtitle = "for differentially expressed genes",
+                x = "Log2 Fold Change",
+                y = "-Log10 P adjusted") +
+  ggplot2::scale_color_manual(breaks = c("gray60", "red", "blue", "green"),
+                              values = c("#A5A5A5", "#F68080", "#9FB3F0", "#8FC48F"),
+                              guide = "none") +
+  ggplot2::theme_classic() +
+  ggplot2::theme(plot.title = element_text(hjust = 0.5),
+                 plot.subtitle = element_text(hjust = 0.5),
+                 axis.title = element_text(face = "bold", size = rel(1)),
+                 panel.grid.major = element_line(colour="#f0f0f0"),
+                 panel.grid.minor = element_blank())
+```
+
+# GSEA
+
+We make over-representation analysis for each group of genes. We load gene sets from MSigDB :
+
+```{r gene_sets}
+gene_sets = aquarius::get_gene_sets(species = "Mus musculus")
+gene_sets = gene_sets$gene_sets
+
+head(gene_sets)
+```
+
+How many gene sets ?
+
+```{r tab_gene_sets}
+gene_sets[, c("gs_subcat", "gs_name")] %>%
+  dplyr::distinct() %>%
+  dplyr::pull(gs_subcat) %>%
+  table() %>%
+  as.data.frame.table() %>%
+  `colnames<-`(c("Category", "Nb gene sets"))
+```
+
+Do all the genes are available ? No. I would be useful to have gene ID in the original data.
+
+```{r all_genes}
+table(res$X1 %in% gene_sets$gene_symbol)
+```
+
+We run GSEA for all available genes, i.e. the number of rows of `res` : `r nrow(res)` genes.
+
+```{r gsea_global, fig.width = 15, fig.height = 50}
+ranked_gene_list = setNames(nm = res$X1,
+                            res$log2FoldChange) %>% sort(., decreasing = TRUE)
+head(ranked_gene_list)
+
+gsea_results = aquarius::gsea_run(ranked_gene_list = ranked_gene_list,
+                                  gene_sets = gene_sets[, c("gs_name", "gene_symbol")],
+                                  GSEA_p_val_thresh = 1)
+
+gsea_results@result %>%
+  dplyr::filter(pvalue < 0.05) %>%
+  dplyr::top_n(., n = 200, wt = abs(NES)) %>%
+  dplyr::mutate(too_long = ifelse(nchar(ID) > 60, yes = TRUE, no = FALSE)) %>%
+  dplyr::mutate(ID = stringr::str_sub(ID, end = 60)) %>%
+  dplyr::mutate(ID = ifelse(too_long, yes = paste0(ID, "..."), no = ID)) %>%
+  aquarius::gsea_plot(show_legend = TRUE) +
+  ggplot2::labs(title = "GSEA using all genes (count matrix)") +
+  ggplot2::theme(plot.title = element_text(size = 20))
+```
+
+We make the gsea plot for some gene sets :
+
+
+```{r enrichplot, fig.width = 10, fig.height = 5}
+gs_oi = c("GOBP_CELL_CELL_SIGNALING_BY_WNT",
+          "GOBP_CANONICAL_WNT_SIGNALING_PATHWAY",
+          "GOBP_CELL_FATE_COMMITMENT",
+          "GOBP_REGULATION_OF_WNT_SIGNALING_PATHWAY",
+          "GOBP_EPIDERMIS_DEVELOPMENT",
+          "WP_HAIR_FOLLICLE_DEVELOPMENT_CYTODIFFERENTIATION_PART_3_OF_3")
+
+make_gsea_plot = function(gene_set) {
+  # Gene set content
+  gs_content = gene_sets %>%
+    dplyr::filter(gs_name == gene_set) %>%
+    dplyr::pull(gene_symbol) %>%
+    unique()
+  
+  # Gene set size
+  nb_genes = length(gs_content)
+  
+  # Enrichment metrics
+  NES = gsea_results@result[gene_set, "NES"]
+  pvalue = gsea_results@result[gene_set, "pvalue"] %>%
+    round(., 4)
+  qvalues = gsea_results@result[gene_set, "qvalues"]
+  
+  if (pvalue > 0.05) {
+    pvalue = paste0("<span style='color:red;'>", pvalue, "</span>")
+  }
+  
+  my_subtitle = paste0("\nNES : ", round(NES, 2),
+                       " | pval : ", pvalue,
+                       " | qval : ", round(qvalues, 4),
+                       " | set size : ", nb_genes, " genes")
+  
+  # Gsea plot
+  p = enrichplot::gseaplot2(x = gsea_results, geneSetID = gene_set) +
+    ggplot2::labs(title = gene_set,
+                  subtitle = my_subtitle) +
+    ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold",
+                                             margin = ggplot2::margin(3, 3, 5, 3)),
+                   plot.subtitle = ggtext::element_markdown(hjust = 0.5,
+                                                            size = 10))
+  
+  # Word cloud
+  wc = ggplot2::ggplot(res[res$X1 %in% gs_content, ],
+                       aes(label = X1, size = log2FoldChange, color = pvalue)) +
+    ggwordcloud::geom_text_wordcloud_area(show.legend = TRUE) +
+    ggplot2::scale_color_gradientn(colors = rev(aquarius::color_gene)) +
+    ggplot2::scale_size_area(max_size = 7) +
+    ggplot2::theme_minimal() +
+    ggplot2::guides(size = "none")
+  
+  # Assembly
+  pp = patchwork::wrap_plots(p, wc, nrow = 1, widths = c(2,1.5))
+  
+  return(pp)
+}
+
+plot_list = lapply(gs_oi, FUN = function(one_gs) {
+  p = make_gsea_plot(one_gs)
+  
+  return(p)
+})
+
+plot_list
+```
+
+# R Session
+
+```{r sessioninfo, echo = FALSE, fold_output = TRUE}
+sessionInfo()
+```
+
