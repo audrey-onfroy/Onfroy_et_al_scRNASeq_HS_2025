@@ -1,17 +1,19 @@
 <!DOCTYPE HTML>
 
-<html lang="en" >
-    <head>
-        <meta charset="UTF-8">
-        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-        <script type="text/javascript" src="./index_layout/functions.js"> </script>
-        <link rel="stylesheet" href="./index_layout/style.css">
-        <link rel="icon" type="image/x-icon" href="./index_layout/logo/favicon.ico">
-        <title>scRNA-Seq</title>
-    </head>
+<html lang="en">
 
-    <body>
-        <!--
+<head>
+    <meta charset="UTF-8">
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+    <script type="text/javascript" src="./index_layout/functions.js">
+    </script>
+    <link rel="stylesheet" href="./index_layout/style.css">
+    <link rel="icon" type="image/x-icon" href="./index_layout/logo/favicon.ico">
+    <title>scRNA-Seq</title>
+</head>
+
+<body>
+    <!--
         # https://plaintexttools.github.io/plain-text-table/
         ┌──────────┬───────────────┬───────────┐
         │ top left │     title     │ top right │  # first-row
@@ -24,92 +26,118 @@
         └───────┴──────────────────────────────┘
         -->
 
-        <div class="body-container">
+    <div class="body-container">
 
-            <!-- FIRST ROW -->
-            <div class="first-row">
-                    <!-- UPDATE BUTTON -->
-                    <div class="left-corner" id="dynamic-url">
-                        Url will be displayed there
-                    </div>
-
-                    <!-- TITLE -->
-                    <div class="title">
-                        <a href='index.html' title='Home'>Single-cell RNA-Seq in the context of Hidradenitis Suppurativa (HS)</a>
-                    </div>
-
-                    <!-- GITHUB LINK -->
-                    <div class="right-corner">
-                        <a  class="github" href="https://github.com/audrey-onfroy" title="Github"></a>
-                    </div>
+        <!-- FIRST ROW -->
+        <div class="first-row">
+            <!-- UPDATE BUTTON -->
+            <div class="left-corner" id="dynamic-url">
+                Url will be displayed there
             </div>
 
-            <div class="column-container">
-
-                <!-- MENU -->
-                <div class="first-column">
-                    
-                    <!-- COPY PASTE MENU THERE -->
-<ul>
-<li>Metadata</li>
-<ul>
-<li><button id='./1_metadata/1_build_metadata.html' class='ulli_button' onClick="changeIframe('./1_metadata/1_build_metadata.html')">Metadata</button></li>
-</ul>
-<br>
-<li>Individual datasets</li>
-<ul>
-<li><button id='./2_individual/2021_31.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_31.html')">2021_31</button></li>
-<li><button id='./2_individual/2021_36.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_36.html')">2021_36</button></li>
-<li><button id='./2_individual/2021_41.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_41.html')">2021_41</button></li>
-<li><button id='./2_individual/2022_01.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_01.html')">2022_01</button></li>
-<li><button id='./2_individual/2022_02.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_02.html')">2022_02</button></li>
-<li><button id='./2_individual/2022_03.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_03.html')">2022_03</button></li>
-<li><button id='./2_individual/2022_14.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_14.html')">2022_14</button></li>
-</ul>
-<br>
-<li>Combined dataset</li>
-<ul>
-<li><button id='./3_combined/1_combined_all.html' class='ulli_button' onClick="changeIframe('./3_combined/1_combined_all.html')">Atlas</button></li>
-</ul>
-<br>
-<li>Immune cells</li>
-<ul>
-<li><button id='./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html')">Dataset</button></li>
-<li><button id='./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html')">Analysis</button></li>
-</ul>
-<br>
-<li>HFSCs</li>
-<ul>
-<li><button id='./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html')">Dataset</button></li>
-<li><button id='./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html')">Analysis</button></li>
-</ul>
-<br>
-<li>IBL + ORS</li>
-<ul>
-<li><button id='./4_zoom/3_zoom_iblmors/1_zoom_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_iblmors/1_zoom_iblmors_dataset.html')">Dataset</button></li>
-<li><button id='./4_zoom/3_zoom_iblmors/2_zoom_iblmors_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_iblmors/2_zoom_iblmors_analysis.html')">Analysis</button></li>
-</ul>
-<br>
-<li>HFSCs + IBL + ORS</li>
-<ul>
-<li><button id='./4_zoom/4_zoom_hfsc_iblmors/1_zoom_hfsc_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/1_zoom_hfsc_iblmors_dataset.html')">Dataset</button></li>
-<li><button id='./4_zoom/4_zoom_hfsc_iblmors/2_trajectory_tinga.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/2_trajectory_tinga.html')">Trajectory (TInGa)</button></li>
-<li><button id='./4_zoom/4_zoom_hfsc_iblmors/3_trajectory_slingshot.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/3_trajectory_slingshot.html')">Trajectory (slingshot)</button></li>
-</ul>
-<br>
-<li>Figures</li>
-<ul>
-<li><button id='./5_figures/figures.html' class='ulli_button' onClick="changeIframe('./5_figures/figures.html')">Figures</button></li>
-</ul>
-</ul>
-
-
-                    <!-- (END OF) COPY PASTE MENU THERE -->
-                </div>
-
-                <!-- IFRAME -->
-                <iframe id="dynamic-iframe" class="second-column" src="./index_layout/pages/first.html"></iframe>
+            <!-- TITLE -->
+            <div class="title">
+                <a href='index.html' title='Home'>Single-cell RNA-Seq in the context of Hidradenitis Suppurativa (HS)</a>
             </div>
-          </div>
-    </body>
+
+            <!-- GITHUB LINK -->
+            <div class="right-corner">
+                <a class="github" href="https://github.com/audrey-onfroy" title="Github"></a>
+            </div>
+        </div>
+
+        <div class="column-container">
+
+            <!-- MENU -->
+            <div class="first-column">
+
+                <!-- COPY PASTE MENU THERE -->
+                <ul>
+                    <li>Metadata</li>
+                    <ul>
+                        <li><button id='./1_metadata/1_build_metadata.html' class='ulli_button' onClick="changeIframe('./1_metadata/1_build_metadata.html')">Metadata</button></li>
+                    </ul>
+                    <br>
+                    <li>Individual datasets</li>
+                    <ul>
+                        <li><button id='./2_individual/2021_31.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_31.html')">2021_31</button></li>
+                        <li><button id='./2_individual/2021_36.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_36.html')">2021_36</button></li>
+                        <li><button id='./2_individual/2021_41.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_41.html')">2021_41</button></li>
+                        <li><button id='./2_individual/2022_01.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_01.html')">2022_01</button></li>
+                        <li><button id='./2_individual/2022_02.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_02.html')">2022_02</button></li>
+                        <li><button id='./2_individual/2022_03.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_03.html')">2022_03</button></li>
+                        <li><button id='./2_individual/2022_14.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_14.html')">2022_14</button></li>
+                    </ul>
+                    <br>
+                    <li>Combined dataset</li>
+                    <ul>
+                        <li><button id='./3_combined/1_combined_all.html' class='ulli_button' onClick="changeIframe('./3_combined/1_combined_all.html')">Atlas</button></li>
+                    </ul>
+                    <br>
+                    <li>Immune cells</li>
+                    <ul>
+                        <li><button id='./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html')">Dataset</button></li>
+                        <li><button id='./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html')">Analysis</button></li>
+                    </ul>
+                    <br>
+                    <li>HFSCs</li>
+                    <ul>
+                        <li><button id='./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html')">Dataset</button></li>
+                        <li><button id='./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html')">Analysis</button></li>
+                    </ul>
+                    <br>
+                    <li>IBL + ORS</li>
+                    <ul>
+                        <li><button id='./4_zoom/3_zoom_iblmors/1_zoom_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_iblmors/1_zoom_iblmors_dataset.html')">Dataset</button></li>
+                        <li><button id='./4_zoom/3_zoom_iblmors/2_zoom_iblmors_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_iblmors/2_zoom_iblmors_analysis.html')">Analysis</button></li>
+                    </ul>
+                    <br>
+                    <li>HFSCs + IBL + ORS</li>
+                    <ul>
+                        <li><button id='./4_zoom/4_zoom_hfsc_iblmors/1_zoom_hfsc_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/1_zoom_hfsc_iblmors_dataset.html')">Dataset</button></li>
+                        <li><button id='./4_zoom/4_zoom_hfsc_iblmors/2_trajectory_tinga.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/2_trajectory_tinga.html')">Trajectory (TInGa)</button></li>
+                        <li><button id='./4_zoom/4_zoom_hfsc_iblmors/3_trajectory_slingshot.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/3_trajectory_slingshot.html')">Trajectory (slingshot)</button></li>
+                    </ul>
+                    <br>
+
+                    <li>OEP002321 dataset</li>
+                    <ul>
+                        <ul>
+                            <li><button id='./5_wu/1_metadata/1_build_metadata.html' class='ulli_button' onClick="changeIframe('./5_wu/1_metadata/1_build_metadata.html')">Metadata</button></li>
+                            <li>Individual datasets</li>
+                            <ul>
+
+                                <li><button id='./5_wu/2_individual/F18.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F18.html')">F18</button></li>
+                                <li><button id='./5_wu/2_individual/F31B.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F31B.html')">F31B</button></li>
+                                <li><button id='./5_wu/2_individual/F31W.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F31W.html')">F31W</button></li>
+                                <li><button id='./5_wu/2_individual/F59.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F59.html')">F59</button></li>
+                                <li><button id='./5_wu/2_individual/F62B.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F62B.html')">F62B</button></li>
+                                <li><button id='./5_wu/2_individual/F62W.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F62W.html')">F62W</button></li>
+                            </ul>
+                            <li><button id='./5_wu/3_combined/1_combined_all.html' class='ulli_button' onClick="changeIframe('./5_wu/3_combined/1_combined_all.html')">Combined dataset</button></li>
+                            <li>IBL + ORS</li>
+                            <ul>
+                                <li><button id='./5_wu/4_ibl_ors/1_zoom_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./5_wu/4_ibl_ors/1_zoom_iblmors_dataset.html')">Dataset</button></li>
+                                <li><button id='./5_wu/4_ibl_ors/2_zoom_iblmors_analysis.html' class='ulli_button' onClick="changeIframe('./5_wu/4_ibl_ors/2_zoom_iblmors_analysis.html')">Analysis</button></li>
+                            </ul>
+                        </ul>
+                    </ul>
+
+                    <br>
+                    <li>Figures</li>
+                    <ul>
+                        <li><button id='./6_figures/figures.html' class='ulli_button' onClick="changeIframe('./6_figures/figures.html')">Figures</button></li>
+                    </ul>
+                </ul>
+
+
+                <!-- (END OF) COPY PASTE MENU THERE -->
+            </div>
+
+            <!-- IFRAME -->
+            <iframe id="dynamic-iframe" class="second-column" src="./index_layout/pages/first.html"></iframe>
+        </div>
+    </div>
+</body>
+
 </html>
