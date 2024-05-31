@@ -655,9 +655,6 @@ cluster_type = setNames(nm = names(cluster_type),
 sobj_ic$cluster_type = cluster_type[sobj_ic$seurat_clusters]
 sobj_ic$cluster_type = factor(sobj_ic$cluster_type,
                               levels = levels(sobj_ic$cell_type))
-sobj_ic$cluster_family = custom_order_cell_type[sobj_ic$cluster_type, "cell_family"]
-sobj_ic$cluster_family = factor(sobj_ic$cluster_family,
-                                levels = names(family_color))
 ```
 
 
@@ -680,6 +677,15 @@ Seurat::DimPlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
   Seurat::NoAxes() + Seurat::NoLegend()
 ```
 
+Cluster type :
+
+```{r fig_ic_cluster_type, fig.width = 4, fig.height = 4}
+Seurat::DimPlot(sobj_ic, reduction = name2D, pt.size = 1,
+                group.by = "cluster_type", cols = color_markers) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() +
+  Seurat::NoLegend()
+```
 
 Violin plot of IL1B in macrophages :
 
@@ -1462,15 +1468,32 @@ patchwork::wrap_plots(plot_list) &
   Seurat::NoLegend()
 ```
 
+Number of cells by cluster and by sample :
 
-Barplot by cluster family :
+```{r ibl_ors_table_clusters}
+table(sobj_iblors$seurat_clusters,
+      sobj_iblors$sample_identifier)
 
-```{r fig_iblors_barplot, fig.width = 5.5, fig.height = 4.5}
+table(sobj_iblors$cluster_type,
+      sobj_iblors$sample_identifier)
+```
+
+Separate cluster 5 :
+
+```{r ibl_ors_table_clusters_sep5}
 sobj_iblors$cluster_type_sep5 = ifelse(sobj_iblors$seurat_clusters == 5,
                                        yes = "ORS_5",
                                        no = as.character(sobj_iblors$cluster_type)) %>%
   as.factor()
 
+table(sobj_iblors$cluster_type_sep5,
+      sobj_iblors$sample_type)
+```
+
+
+Barplot by cluster family :
+
+```{r fig_iblors_barplot, fig.width = 5.5, fig.height = 4.5}
 quantif = table(sobj_iblors$sample_identifier) %>%
   as.data.frame.table() %>%
   `colnames<-`(c("Sample", "nb_cells"))
@@ -1494,6 +1517,54 @@ aquarius::plot_barplot(df = quantif_to_plot,
   ggplot2::scale_fill_manual(values = unlist(color_markers[levels(sobj_iblors$cluster_type)]),
                              breaks = names(color_markers[levels(sobj_iblors$cluster_type)]),
                              name = "Cell Type") +
+  ggplot2::scale_y_continuous(breaks = seq(0, 1, by = 0.25),
+                              labels = paste0(seq(0, 100, by = 25), sep = " %"),
+                              expand = ggplot2::expansion(add = c(0, 0.05))) +
+  ggplot2::theme(axis.title.y = element_blank(),
+                 axis.line.x = element_line(colour = "lightgray"),
+                 text = element_text(size = 15),
+                 legend.position = "right")
+```
+
+Focus on cluster 5, among ORS :
+
+```{r fig_iblors_barplot_cluster5, fig.width = 5.5, fig.height = 4.5}
+subsobj = subset(sobj_iblors, cluster_type == "ORS")
+subsobj$cluster_type_sep5 = ifelse(subsobj$seurat_clusters == 5,
+                                   yes = "ORS_5",
+                                   no = as.character(subsobj$cluster_type)) %>%
+  as.factor()
+
+quantif = table(subsobj$sample_identifier) %>%
+  as.data.frame.table() %>%
+  `colnames<-`(c("Sample", "nb_cells"))
+
+quantif_to_plot = table(subsobj$sample_identifier,
+                        subsobj$cluster_type_sep5) %>%
+  as.data.frame.table() %>%
+  `colnames<-`(c("Sample", "CellType", "Number")) %>%
+  dplyr::mutate(Style = ifelse(CellType == "ORS_5", yes = "IL1R2+", no = "IL1R2-")) %>%
+  dplyr::mutate(Style = factor(Style, levels = c("IL1R2-", "IL1R2+"))) %>%
+  dplyr::mutate(CellType = ifelse(CellType == "ORS_5", yes = "ORS", no = as.character(CellType))) %>%
+  `colnames<-`(c("Sample", "Cell Type", "Number", "IL1R2 status")) %>%
+  dplyr::left_join(., y = quantif, by = "Sample") %>%
+  dplyr::mutate(prop_cluster5 = round(Number/nb_cells, 4))
+
+aquarius::plot_barplot(df = quantif_to_plot,
+                       x = "Sample", y = "Number",
+                       fill = "IL1R2 status",
+                       position = position_fill()) +
+  # ggplot2::geom_label(data = quantif, inherit.aes = FALSE,
+  #                     aes(x = .data$Sample, y = 1.05, label = .data$nb_cells),
+  #                     label.size = 0, size = 5) +
+  ggplot2::geom_label(data = quantif_to_plot %>%
+                        dplyr::filter(`IL1R2 status` == "IL1R2+"),
+                      inherit.aes = FALSE,
+                      aes(x = .data$Sample, y = prop_cluster5 + 0.05, label = .data$Number),
+                      label.size = 0, size = 5, fill = NA, col = "white") +
+  ggplot2::scale_fill_manual(values = c("black", color_markers[["ORS"]]),
+                             breaks = c("IL1R2+", "IL1R2-"),
+                             name = "IL1R2 status") +
   ggplot2::scale_y_continuous(breaks = seq(0, 1, by = 0.25),
                               labels = paste0(seq(0, 100, by = 25), sep = " %"),
                               expand = ggplot2::expansion(add = c(0, 0.05))) +
@@ -1746,7 +1817,7 @@ Genes of interest :
 
 ```{r fig_iblors_genes, fig.width = 2, fig.height = 2}
 genes = c("KRT16", "COL17A1", "DST", "KRT6B", "IL1R2", "WNT3",
-          "IFI27", "CXCL14", "IGFBP3", "KRT15", "CD200")
+          "IFI27", "CXCL14", "IGFBP3", "KRT15", "CD200", "IL18")
 
 plot_list = lapply(c(1:length(genes)), FUN = function(gene_id) {
   gene = genes[[gene_id]]
@@ -2257,6 +2328,51 @@ plot_list = lapply(c(1:length(genes)), FUN = function(gene_id) {
 
 plot_list
 ```
+
+# Supplementary tables
+
+In this section, we save files to associate with the manuscript, as supplementary tables.
+
+## Table S2 (package version)
+
+We load the table :
+
+```{r ts2_load}
+package_version = read.table(paste0(".", "/data/info_to_install_2023_04_17.txt"),
+                             header = TRUE)
+head(package_version)
+```
+
+Columns correspond to :
+
+* **order** : order to install package such that one never need to install dependencies
+* **package_name** : package name
+* **version** : installed version, on the local machine
+* **url** : the package was installed in the Singularity container using this url
+
+We save this table, except the last column (just for me) :
+
+```{r ts2_save}
+openxlsx::write.xlsx(package_version[, c(1:4)],
+                     file = paste0(".", "/data/Supplementary Table 2.xlsx"))
+```
+
+## Table S3 (cell type annotation)
+
+We load the table :
+
+```{r ts3_load}
+cell_markers = readRDS(paste0(data_dir, "/1_metadata/hs_hd_cell_markers.rds"))
+lengths(cell_markers)
+```
+
+We save this table, except the last column (just for me) :
+
+```{r ts3_save}
+openxlsx::write.xlsx(cell_markers,
+                     file = paste0(".", "/data/Supplementary Table 3.xlsx"))
+```
+
 
 # R Session
 
