@@ -468,6 +468,17 @@ We save the list of results :
 saveRDS(list_results, file = paste0(out_dir, "/ibl_ors_markers.rds"))
 ```
 
+We also save as XLSX file :
+
+```{r save_list_results2}
+list_results2 = list(IBL_vs_all = list_results$IBL_vs_all$mark,
+                     IBL_vs_all_selection = list_results$IBL_vs_all$choosen_ones,
+                     ORS_vs_all = list_results$ORS_vs_all$mark,
+                     ORS_vs_all_selection = list_results$ORS_vs_all$choosen_ones)
+
+openxlsx::write.xlsx(list_results2, file = paste0(out_dir, "/ibl_vs_ors_markers.xlsx"))
+```
+
 
 # R Session
 
