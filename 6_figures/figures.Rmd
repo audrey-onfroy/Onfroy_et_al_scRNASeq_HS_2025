@@ -731,7 +731,10 @@ plot_list = apply(table_ic, 1, FUN = function(one_row) {
   # Make figure
   p = Seurat::VlnPlot(subsobj, group.by = "sample_identifier",
                       features = feature, cols = sample_info$color) +
-    ggplot2::labs(subtitle = population) +
+    ggplot2::labs(title = stringr::str_replace_all(population,
+                                                   pattern = "_",
+                                                   replacement = " "),
+                  subtitle = feature) +
     ggplot2::theme(plot.subtitle = element_text(hjust = 0.5),
                    axis.title.x = element_blank(),
                    legend.position = "none")
@@ -796,7 +799,10 @@ plot_list = apply(table_ic, 1, FUN = function(one_row) {
                       features = feature) +
     ggplot2::scale_fill_manual(values = sample_type_colors,
                                breaks = names(sample_type_colors)) +
-    ggplot2::labs(subtitle = population) +
+    ggplot2::labs(title = stringr::str_replace_all(population,
+                                                   pattern = "_",
+                                                   replacement = " "),
+                  subtitle = feature) +
     # Significance bar
     ggplot2::geom_segment(data = data.frame(1), inherit.aes = FALSE,
                           size = 0.5,
@@ -856,8 +862,8 @@ quantif_immune = table(sobj_ic$sample_identifier, sobj_ic$cluster_type) %>%
 
 ggplot2::ggplot(data = quantif_immune %>% dplyr::filter(isCytotoxic != "cytotoxic"),
                 aes(x = Sample, y = Proportion, fill = CellType)) +
-  ggplot2::geom_bar(stat = "identity", position = position_dodge(width = 0.5),
-                    color = "black", size = 0.25, width = 0.4) +
+  ggplot2::geom_bar(stat = "identity", position = position_dodge(width = 0.70),
+                    color = "black", size = 0.25, width = 0.70) +
   ggplot2::scale_fill_manual(values = unlist(color_markers[c("CD4 T cells", "CD8 T cells", "macrophages")]),
                              breaks = names(color_markers[c("CD4 T cells", "CD8 T cells", "macrophages")]),
                              name = "Cell Type") +
@@ -2653,7 +2659,7 @@ avg_logFC_range = setNames(c(min(mark_label$avg_logFC), -1, 0, 1, max(mark_label
 ggplot2::ggplot(mark, aes(x = pct.1, y = pct.2, col = avg_logFC)) +
   ggplot2::geom_abline(slope = 1, intercept = 0, lty = 2) +
   ggplot2::geom_point() +
-  ggrepel::geom_label_repel(data = mark_label, max.overlaps = Inf,
+  ggrepel::geom_label_repel(data = mark_label, max.overlaps = Inf, seed = 1,
                             aes(x = pct.1, y = pct.2, label = gene_name),
                             col = "black", fill = NA, size = 3.5, label.size = NA) +
   ggplot2::labs(x = "Enriched in IBL",

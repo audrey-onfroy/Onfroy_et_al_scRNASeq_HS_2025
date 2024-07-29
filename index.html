@@ -58,51 +58,58 @@
                         <li><button id='./1_metadata/1_build_metadata.html' class='ulli_button' onClick="changeIframe('./1_metadata/1_build_metadata.html')">Metadata</button></li>
                     </ul>
                     <br>
-                    <li>Individual datasets</li>
-                    <ul>
-                        <li><button id='./2_individual/2021_31.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_31.html')">2021_31</button></li>
-                        <li><button id='./2_individual/2021_36.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_36.html')">2021_36</button></li>
-                        <li><button id='./2_individual/2021_41.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_41.html')">2021_41</button></li>
-                        <li><button id='./2_individual/2022_01.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_01.html')">2022_01</button></li>
-                        <li><button id='./2_individual/2022_02.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_02.html')">2022_02</button></li>
-                        <li><button id='./2_individual/2022_03.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_03.html')">2022_03</button></li>
-                        <li><button id='./2_individual/2022_14.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_14.html')">2022_14</button></li>
-                    </ul>
+                    <li><a onClick="toggleSwitch(this)">Individual samples &#9662;</a>
+                        <ul style="display:none">
+                            <li><button id='./2_individual/2021_31.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_31.html')">2021_31</button></li>
+                            <li><button id='./2_individual/2021_36.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_36.html')">2021_36</button></li>
+                            <li><button id='./2_individual/2021_41.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_41.html')">2021_41</button></li>
+                            <li><button id='./2_individual/2022_01.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_01.html')">2022_01</button></li>
+                            <li><button id='./2_individual/2022_02.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_02.html')">2022_02</button></li>
+                            <li><button id='./2_individual/2022_03.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_03.html')">2022_03</button></li>
+                            <li><button id='./2_individual/2022_14.html' class='ulli_button' onClick="changeIframe('./2_individual/2022_14.html')">2022_14</button></li>
+                        </ul>
+                    </li>
                     <br>
                     <li>Combined dataset</li>
                     <ul>
                         <li><button id='./3_combined/1_combined_all.html' class='ulli_button' onClick="changeIframe('./3_combined/1_combined_all.html')">Atlas</button></li>
-                    </ul>
-                    <br>
-                    <li>Immune cells</li>
-                    <ul>
-                        <li><button id='./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html')">Dataset</button></li>
-                        <li><button id='./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html')">Analysis</button></li>
-                    </ul>
-                    <br>
-                    <li>HFSCs</li>
-                    <ul>
-                        <li><button id='./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html')">Dataset</button></li>
-                        <li><button id='./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html')">Analysis</button></li>
-                    </ul>
-                    <br>
-                    <li>IBL + ORS</li>
-                    <ul>
-                        <li><button id='./4_zoom/3_zoom_iblmors/1_zoom_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_iblmors/1_zoom_iblmors_dataset.html')">Dataset</button></li>
-                        <li><button id='./4_zoom/3_zoom_iblmors/2_zoom_iblmors_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_iblmors/2_zoom_iblmors_analysis.html')">Analysis</button></li>
-                    </ul>
-                    <br>
-                    <li>HFSCs + IBL + ORS</li>
-                    <ul>
-                        <li><button id='./4_zoom/4_zoom_hfsc_iblmors/1_zoom_hfsc_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/1_zoom_hfsc_iblmors_dataset.html')">Dataset</button></li>
-                        <li><button id='./4_zoom/4_zoom_hfsc_iblmors/2_trajectory_tinga.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/2_trajectory_tinga.html')">Trajectory (TInGa)</button></li>
-                        <li><button id='./4_zoom/4_zoom_hfsc_iblmors/3_trajectory_slingshot.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/3_trajectory_slingshot.html')">Trajectory (slingshot)</button></li>
+                        <li><button id='./3_combined/2_ibl_ors_markers.html' class='ulli_button' onClick="changeIframe('./3_combined/2_ibl_ors_markers.html')">IBL and mORS signature</button></li>
                     </ul>
                     <br>
 
-                    <li>OEP002321 dataset</li>
-                    <ul>
+                    <li><a onClick="toggleSwitch(this)">Zoom &#9662;</a>
                         <ul>
+                            <li>Immune cells</li>
+                            <ul>
+                                <li><button id='./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html')">Dataset</button></li>
+                                <li><button id='./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html')">Analysis</button></li>
+                            </ul>
+                            <li>HFSCs</li>
+                            <ul>
+                                <li><button id='./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html')">Dataset</button></li>
+                                <li><button id='./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html')">Analysis</button></li>
+                            </ul>
+                            <li>IBL + ORS</li>
+                            <ul>
+                                <li><button id='./4_zoom/3_zoom_iblmors/1_zoom_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_iblmors/1_zoom_iblmors_dataset.html')">Dataset</button></li>
+                                <li><button id='./4_zoom/3_zoom_iblmors/2_zoom_iblmors_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_iblmors/2_zoom_iblmors_analysis.html')">Analysis</button></li>
+                            </ul>
+                            <li>HFSCs + IBL + ORS</li>
+                            <ul>
+                                <li><button id='./4_zoom/4_zoom_hfsc_iblmors/1_zoom_hfsc_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/1_zoom_hfsc_iblmors_dataset.html')">Dataset</button></li>
+                                <li><button id='./4_zoom/4_zoom_hfsc_iblmors/2_trajectory_tinga.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/2_trajectory_tinga.html')">Trajectory (TInGa)</button></li>
+                                <li><button id='./4_zoom/4_zoom_hfsc_iblmors/3_trajectory_slingshot.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/3_trajectory_slingshot.html')">Trajectory (slingshot)</button></li>
+                            </ul>
+                            <li>Matrix</li>
+                            <ul>
+                                <li><button id='./4_zoom/5_zoom_matrix/1_zoom_matrix_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/5_zoom_matrix/1_zoom_matrix_dataset.html')">Dataset</button></li>
+                                <li><button id='./4_zoom/5_zoom_matrix/2_zoom_matrix_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/5_zoom_matrix/2_zoom_matrix_analysis.html')">Analysis</button></li>
+                            </ul>
+                        </ul>
+                    </li>
+                    <br>
+                    <li><a onClick="toggleSwitch(this)">OEP002321 dataset &#9662;</a>
+                        <ul style="display:none">
                             <li><button id='./5_wu/1_metadata/1_build_metadata.html' class='ulli_button' onClick="changeIframe('./5_wu/1_metadata/1_build_metadata.html')">Metadata</button></li>
                             <li>Individual datasets</li>
                             <ul>
@@ -121,7 +128,7 @@
                                 <li><button id='./5_wu/4_ibl_ors/2_zoom_iblmors_analysis.html' class='ulli_button' onClick="changeIframe('./5_wu/4_ibl_ors/2_zoom_iblmors_analysis.html')">Analysis</button></li>
                             </ul>
                         </ul>
-                    </ul>
+                    </li>
 
                     <br>
                     <li>Figures</li>
