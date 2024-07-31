@@ -1,0 +1,128 @@
+---
+title: "HS project"
+subtitle: "Welcome"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    code_download: true
+    toc: true
+    toc_float: true
+    number_sections: false
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+<!-- Set default parameters for all chunks -->
+```{r, setup, include = FALSE}
+set.seed(1337L)
+knitr::opts_chunk$set(echo = TRUE,
+                      eval = FALSE)
+```
+
+
+This site gathers and describes all scripts used for the analysis of single-cell RNA sequencing (scRNA-Seq), from raw count matrices to figure presented in the publication.
+
+<center>ADD PUBLICATION LINK HERE</center><br><br>
+
+All computational analyses were conducted using R language within RStudio. We used the rmarkdown package to develop R Markdown notebooks in RMD format. Notebooks are organized into two types of sections. The "chunk" section contains code in the R programming language, while the output is displayed below the chunk. Chunks are surrounded by explanatory comments in human readable language.
+
+RMD files were compiled to generate HTML files, which are shared through this site. Section titles are written in bold. The plain text items listed in the contents box on the left are clickable and each one links to one HTML file. Once a file is open, a link in the top left corner enables to open it in a new tab. In the top right corner, the button "Code" allows to download the RMD file behind the HTML.
+
+# Data availability
+
+| Content               |      Availability      | Tables in the publication |
+|:---------------------:|:----------------------:|:---------------------------------------------:|
+| scRNA-Seq data        |  https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE273109 | Information about patients in **Table S1** |
+| R Markdown files      |  https://github.com/audrey-onfroy/scrnaseq_hair_follicles_hidradenitis_suppurativa or directly downloadable in the top right corner of this site | / |
+| Singularity container |  https://zenodo.org/records/13145084 | List of packages in **Table S2** |
+| aquarius package      |  https://github.com/audrey-onfroy/aquarius | / |
+
+One scRNA-Seq dataset corresponds to hair follicles from one human individual, either a HS patient or healthy donor. For each dataset, the following files are accessible at the accession number **GSE273109** in the Gene Expression Omnibus (GEO) repository (link above):
+
+* FASTQ files: four R1 (cell barcode + UMI), four R2 (biological information) and four I1 (sample index). One R1-R2-I1 group of files correspond to one lane in the sequencer. Each sample was sequenced once.
+* `features.tsv.gz`, `barcodes.tsv.gz` and `matrix.mtx.gz`: raw count matrix, output by Cell Ranger software version 3.1.0, using the hg19 reference transcriptome.
+* `sobj_filtered.rds`: Seurat object with cells filtered based on quality metrics. The object format is issued from Seurat package version 3.1.5.
+
+# Data presentation
+
+Seven original datasets were analyzed in the article, whose main characteristics are described in the table below.
+
+```{r sample_info, echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE, fig.width = 8, fig.height = 3}
+library(dplyr)
+
+data_dir = "./.."
+sample_info = readRDS(paste0(data_dir, "/1_metadata/hs_hd_sample_info.rds"))
+
+# GEO identifiers
+geo_table = data.frame(sample_identifier = c("HS_1", "HS_2", "HS_3", "HS_4", "HS_5", "HD_1", "HD_2"),
+                       GEO_identifier = paste0("GSM842189", c(0:6)))
+
+# patchwork
+dplyr::left_join(sample_info, geo_table, by = "sample_identifier") %>%
+  dplyr::select(project_name, sample_type, sample_identifier, GEO_identifier, gender, color) %>%
+  aquarius::fig_plot_gb(., title = "Datasets") %>%
+  patchwork::wrap_plots() +
+  patchwork::plot_layout(design = "A\nB", heights = c(0.1,5)) &
+  ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5, face = "bold", size = 15))
+```
+
+# Analysis framework
+
+Analyses were conducted in specific directories, organised in a tree as shown below:
+
+```{bash, eval = TRUE}
+cat tree.txt
+```
+
+These directories can be described as follow:
+
+- **intro** corresponds to this introducing file,
+- **metadata** contains the notebook used to build global data, such as cell types markers to annotate cells, colors associated with cell types, and samples information (project name, associated color and sample identifier, as described earlier),
+- **individual** is the directory where all individual datasets are generated, and stored in the **datasets** directory,
+- **input** stores all the input data, i.e. the raw count matrices; this directory contains one folder named according to each project name. Each folder contains the three files associated with the raw count matrix,
+- **combined** corresponds to the directory where individual datasets are combined,
+- **zoom** directories are named according to a population of interest, and enable to build and analyze dataset corresponding to a specific population,
+- **wu** directory corresponds to a re-analysis of scRNA-Seq from [Wu **et al.**, *Cell discovery* (2022)](https://www.nature.com/articles/s41421-022-00394-2),
+- **figure** contains the notebook enabling the generation of all figures for the article, each stored in the **figures_detail** folder as a PDF and a PNG files automatically upon compilation. Files are named according to the chunk name from which they are generated;
+- **index_build** contains the files required to format this website.
+
+Note that the menu on the left follows almost the same structure.
+
+# RMD knitting
+
+R Markdown (RMD) notebooks were developed within R Studio. To ensure the reproducibility of all the analyses from the raw count matrices to the final figures and results, the RMD files were compiled using a Singularity container, to generate the HTML pages presented here. Excepting the notebooks focusing on individual dataset, all notebooks are parameter-free, so that they can be compiled using the same command. The following template was used:
+
+```{bash}
+file="FILE_NAME"
+singularity exec \
+--bind /home \
+/path/to/singularity/image/singularity.simg \
+Rscript -e "rmarkdown::render(input = '${file}.Rmd', output_file = '${file}.html')"
+```
+
+The `1_make_individual` notebook requires one parameter called `sample_name` and corresponding to the project name as described earlier. Project name should be defined in the metadata file, with color, sample identifier and so on, because these information will be used to annotate the individual datasets. Project name should also correspond to a folder name in the input folder. To generate the individual datasets, we thus use the following bash commands:
+
+```{bash}
+file="1_make_individual"
+for sample in $(ls ./2_individual/input/)
+do
+echo $sample
+singularity exec \
+--bind /home \
+/path/to/singularity/image/singularity.simg \
+Rscript -e "rmarkdown::render(input = './1_make_individual.Rmd',
+                              output_file = './${sample}.html',
+                              params = list(sample_name = '${sample}'))"
+done
+```
+
+Since R libraries are not located at the same location within the Singularity container or on the local machine, we add the `.libPaths()` R command at the beginning of each notebook. In the compiled HTML file, we thus can easily check if the notebook was compiled through the container or not.
+
+# Re-usability
+
+This website was built using our template available at [https://github.com/audrey-onfroy/organize_html](https://github.com/audrey-onfroy/organize_html).
+
+--end--

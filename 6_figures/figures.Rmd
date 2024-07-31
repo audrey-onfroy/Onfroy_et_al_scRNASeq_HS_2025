@@ -375,7 +375,7 @@ Gene expression to assess annotation :
 genes = c("PTPRC", "MSX2", "KRT14",
           # For supplementary figure
           "VIM", "FGF18", "SOX9", "TCF3", "TBX1",
-          "RUNX1", "NFATC1", "LHX2", "CD34")
+          "RUNX1", "NFATC1", "LHX2", "CD34", "TCF4")
 
 plot_list = lapply(c(1:length(genes)), FUN = function(gene_id) {
   gene = genes[[gene_id]]
@@ -1968,6 +1968,7 @@ list_colors[["nFeature_RNA"]] = circlize::colorRamp2(breaks = seq(from = min(sub
 # Cells order
 column_order = subsobj@meta.data %>%
   dplyr::mutate(seurat_clusters = factor(seurat_clusters, levels = c(5, 3, 0, 1, 7))) %>%
+  dplyr::mutate(sample_type = factor(sample_type, levels = c("HS", "HD"))) %>%
   dplyr::arrange(sample_type, seurat_clusters, sample_identifier) %>%
   rownames()
 column_order = match(column_order, rownames(subsobj@meta.data))
@@ -1992,7 +1993,7 @@ ht = Heatmap(as.matrix(mat_expr),
              top_annotation = ha_top,
              bottom_annotation = ha_bottom,
              # Cell grouping
-             column_split = subsobj$sample_type %>% as.character(),
+             column_split = subsobj$sample_type,
              cluster_columns = FALSE,
              column_order = column_order,
              column_title = NULL,
@@ -2169,6 +2170,134 @@ dynplot::plot_dimred(trajectory = my_traj,
                      size_transitions = 1)
 ```
 
+Violin plots for HF-SCs markers :
+
+```{r fig_traj_vln, fig.width = 2.5, fig.height = 4}
+features_oi = c("SOX9", "TCF4", "TBX1", "NFATC1", 
+                "LHX2", "RUNX1", "VIM", "TCF3", "FGF18", "CD34",
+                # HFSC + ORS
+                "COL17A1", "MT2A", "TXNIP", "CAVIN1",
+                # HFSC + IBL
+                "TUBB2A", "KRT6B", "MARCKSL1", "ID4", "CYP1B1", "BARX2",
+                # HFSC
+                "LMCD1", "TCEAL2", "FRZB", "THBS1", "DIO2")
+
+plot_list = lapply(features_oi, FUN = function(one_gene) {
+  p = Seurat::VlnPlot(sobj_traj, group.by = "cluster_type",
+                      features = one_gene, pt.size = 0.001) +
+    ggplot2::scale_fill_manual(values = color_markers[levels(sobj_traj$cluster_type)],
+                               breaks = levels(sobj_traj$cluster_type)) +
+    ggplot2::theme(plot.subtitle = element_text(hjust = 0.5),
+                   axis.title.x = element_blank(),
+                   legend.position = "none")
+  return(p)
+})
+
+names(plot_list) = features_oi
+plot_list
+```
+
+Same split by sample type :
+
+```{r fig_traj_vln_split, fig.width = 5, fig.height = 4}
+plot_list = lapply(features_oi, FUN = function(one_gene) {
+  p = Seurat::VlnPlot(sobj_traj, group.by = "cluster_type", split.by = "sample_type",
+                      features = one_gene, pt.size = 0.001) +
+    ggplot2::scale_fill_manual(values = sample_type_colors,
+                               breaks = names(sample_type_colors)) +
+    ggplot2::theme(plot.subtitle = element_text(hjust = 0.5),
+                   axis.title.x = element_blank(),
+                   legend.position = "none")
+  return(p)
+})
+
+names(plot_list) = features_oi
+plot_list
+```
+
+On the diffusion map :
+
+```{r fig_traj_feature, fig.width = 5, fig.height = 5}
+axis_lims = apply(sobj_traj@reductions[["harmony_dm"]]@cell.embeddings[, c(1:2)], 2, range)
+
+plot_list = lapply(features_oi, FUN = function(one_gene) {
+  p = Seurat::FeaturePlot(sobj_traj, features = one_gene, reduction = "harmony_dm") +
+    ggplot2::scale_color_gradientn(colors = aquarius::color_gene,
+                                   breaks = c(0:10)) +
+    ggplot2::lims(x = axis_lims[, 1],
+                  y = axis_lims[, 2]) +
+    ggplot2::theme(aspect.ratio = 1) +
+    Seurat::NoAxes()
+  
+  return(p)
+})
+
+names(plot_list) = features_oi
+plot_list
+```
+
+Heatmap :
+
+```{r fig_traj_heatmap, fig.width = 10, fig.height = 10, class.source = "fold-hide"}
+# Matrix
+mat_expr = Seurat::GetAssayData(sobj_traj)
+mat_expr = mat_expr[features_oi, ]
+mat_expr = Matrix::t(mat_expr)
+mat_expr = dynutils::scale_quantile(mat_expr) # between 0 and 1
+mat_expr = Matrix::t(mat_expr)
+dim(mat_expr) # genes x cells
+
+## Colors
+list_colors = list()
+
+# Heatmap
+list_colors[["expression"]] = rev(RColorBrewer::brewer.pal(name = "RdBu", n = 9))
+
+# Sample annotation (top annotation)
+list_colors[["sample_type"]] = sample_type_colors
+list_colors[["cluster_type"]] = setNames(nm = levels(sobj_traj$cluster_type),
+                                         color_markers[levels(sobj_traj$cluster_type)])
+list_colors[["pseudotime"]] = circlize::colorRamp2(breaks = seq(min(sobj_traj$pseudotime, na.rm = TRUE),
+                                                                max(sobj_traj$pseudotime, na.rm = TRUE),
+                                                                length.out = 9),
+                                                   colors = viridis::viridis(9))
+
+# Cells order
+column_order = sobj_traj@meta.data %>%
+  dplyr::arrange(cluster_type, pseudotime) %>%
+  rownames()
+column_order = match(column_order, rownames(sobj_traj@meta.data))
+
+# Heatmap
+ha_top = HeatmapAnnotation(cluster_type = sobj_traj$cluster_type,
+                           pseudotime = sobj_traj$pseudotime,
+                           sample_type = sobj_traj$sample_type,
+                           col = list(sample_type = list_colors[["sample_type"]],
+                                      cluster_type = list_colors[["cluster_type"]],
+                                      pseudotime = list_colors[["pseudotime"]]))
+
+# Heatmap
+ht = Heatmap(as.matrix(mat_expr),
+             heatmap_legend_param = list(title = "Expression", at = c(0, 1), 
+                                         labels = c("low", "high")),
+             col = list_colors[["expression"]],
+             top_annotation = ha_top,
+             show_column_names = FALSE,
+             column_order = column_order,
+             column_gap = unit(2, "mm"),
+             column_split = sobj_traj$cluster_type,
+             cluster_rows = FALSE,
+             row_title = NULL,
+             row_names_gp = grid::gpar(fontsize = 14, fontface = "plain"),
+             use_raster = FALSE,
+             show_heatmap_legend = TRUE,
+             border = TRUE)
+
+ComplexHeatmap::draw(ht,
+                     merge_legend = TRUE,
+                     heatmap_legend_side = "bottom",
+                     annotation_legend_side = "bottom")
+```
 
 # Matrix cells
 

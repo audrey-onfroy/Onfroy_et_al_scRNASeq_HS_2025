@@ -1,0 +1,78 @@
+tree -n -P "*Rmd" ./.. > tree.txt
+
+
+./..
+├── 0_intro
+│   └── welcome.Rmd
+├── 1_metadata
+│   └── 1_build_metadata.Rmd
+├── 2_individual
+│   ├── 1_make_individual.Rmd
+│   ├── datasets
+│   └── input
+│       ├── 2021_31
+│       ├── 2021_36
+│       ├── 2021_41
+│       ├── 2022_01
+│       ├── 2022_02
+│       ├── 2022_03
+│       └── 2022_14
+├── 3_combined
+│   ├── 1_combined_all.Rmd
+│   └── 2_ibl_ors_markers.Rmd
+├── 4_zoom
+│   ├── 1_zoom_immune
+│   │   ├── 1_zoom_immune_dataset.Rmd
+│   │   └── 2_zoom_immune_analysis.Rmd
+│   ├── 2_zoom_hfsc
+│   │   ├── 1_zoom_hfsc_dataset.Rmd
+│   │   └── 2_zoom_hfsc_analysis.Rmd
+│   ├── 3_zoom_iblmors
+│   │   ├── 1_zoom_iblmors_dataset.Rmd
+│   │   └── 2_zoom_iblmors_analysis.Rmd
+│   ├── 4_zoom_hfsc_iblmors
+│   │   ├── 1_zoom_hfsc_iblmors_dataset.Rmd
+│   │   ├── 2_trajectory_tinga.Rmd
+│   │   └── 3_trajectory_slingshot.Rmd
+│   └── 5_zoom_matrix
+│       ├── 1_zoom_matrix_dataset.Rmd
+│       └── 2_zoom_matrix_analysis.Rmd
+├── 5_wu
+│   ├── 1_metadata
+│   │   └── 1_build_metadata.Rmd
+│   ├── 2_individual
+│   │   ├── 1_make_individual.Rmd
+│   │   ├── datasets
+│   │   └── input
+│   │       ├── F18
+│   │       │   ├── filtered_feature_bc_matrix
+│   │       │   └── raw_feature_bc_matrix
+│   │       ├── F31B
+│   │       │   ├── filtered_feature_bc_matrix
+│   │       │   └── raw_feature_bc_matrix
+│   │       ├── F31W
+│   │       │   ├── filtered_feature_bc_matrix
+│   │       │   └── raw_feature_bc_matrix
+│   │       ├── F59
+│   │       │   ├── filtered_feature_bc_matrix
+│   │       │   └── raw_feature_bc_matrix
+│   │       ├── F62B
+│   │       │   ├── filtered_feature_bc_matrix
+│   │       │   └── raw_feature_bc_matrix
+│   │       └── F62W
+│   │           ├── filtered_feature_bc_matrix
+│   │           └── raw_feature_bc_matrix
+│   ├── 3_combined
+│   │   └── 1_combined_all.Rmd
+│   └── 4_ibl_ors
+│       ├── 1_zoom_iblmors_dataset.Rmd
+│       └── 2_zoom_iblmors_analysis.Rmd
+├── 6_figures
+│   ├── data
+│   ├── figures_detail
+│   └── figures.Rmd
+└── index_layout
+    ├── logo
+    └── pages
+
+50 directories, 22 files
