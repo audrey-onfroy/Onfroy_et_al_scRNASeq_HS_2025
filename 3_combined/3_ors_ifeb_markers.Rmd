@@ -1,0 +1,488 @@
+---
+title: "HS project"
+subtitle: "IFE basal and ORS signature"
+author: "Audrey"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    code_folding: show
+    code_download: true
+    toc: true
+    toc_float: true
+    number_sections: false
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+<!-- Automatically computes and prints in the output the running time for any code chunk -->
+```{r, echo=FALSE}
+# https://github.com/rstudio/rmarkdown/issues/1453
+hooks = knitr::knit_hooks$get()
+hook_foldable = function(type) {
+  force(type)
+  function(x, options) {
+    res = hooks[[type]](x, options)
+    
+    if (isFALSE(options[[paste0("fold_", type)]])) return(res)
+    
+    paste0(
+      "<details><summary>", "show", "</summary>\n\n",
+      res,
+      "\n\n</details>"
+    )
+  }
+}
+knitr::knit_hooks$set(
+  output = hook_foldable("output"),
+  plot = hook_foldable("plot"),
+  time_it = local({
+    now = NULL
+    function(before, options) {
+      if (options$time_it) {
+        if (before) {
+          now <= Sys.time()
+        } else {
+          res = difftime(Sys.time(), now, units = "secs")
+          paste("(Time to run :", round(res, digits = 2), "s)")
+        }
+      }
+    }
+  })
+)
+```
+
+<!-- Set default parameters for all chunks -->
+```{r, setup, include = FALSE}
+set.seed(1337L)
+knitr::opts_chunk$set(echo = TRUE, # display code
+                      # display chunk output
+                      message = FALSE,
+                      warning = FALSE,
+                      fold_output = FALSE, # usefull for sessionInfo()
+                      fold_plot = FALSE,
+                      
+                      # figure settings
+                      fig.align = 'center',
+                      fig.width = 20,
+                      fig.height = 15,
+                      
+                      # something about seed, chunk and Rmarkdown compilation
+                      # https://stackoverflow.com/questions/39417003/long-vectors-not-supported-yet-error-in-rmd-but-not-in-r-script
+                      # cache = TRUE,
+                      cache.lazy = FALSE, 
+                      
+                      # add runtime after chunk
+                      time_it = FALSE)
+```
+
+
+This file is used to identify specific markers for ORS and IFE basal.
+
+```{r library}
+library(dplyr)
+library(patchwork)
+library(ggplot2)
+library(ComplexHeatmap)
+
+.libPaths()
+```
+
+# Preparation
+
+In this section, we set the global settings of the analysis. We will store data there :
+
+```{r out_dir}
+out_dir = "."
+```
+
+We load the dataset :
+
+```{r load_sobj}
+sobj = readRDS(paste0(out_dir, "/hs_hd_sobj.rds"))
+sobj
+```
+
+We load the sample information :
+
+```{r custom_palette_sample, fig.width = 6, fig.height = 6}
+sample_info = readRDS(paste0(out_dir, "/../1_metadata/hs_hd_sample_info.rds"))
+project_names_oi = sample_info$project_name
+
+graphics::pie(rep(1, nrow(sample_info)),
+              col = sample_info$color,
+              labels = sample_info$project_name)
+```
+
+Here are custom colors for each cell type :
+
+```{r color_markers, fig.width = 10, fig.height = 1.2, class.source = "fold-hide"}
+color_markers = readRDS(paste0(out_dir, "/../1_metadata/hs_hd_color_markers.rds"))
+
+data.frame(cell_type = names(color_markers),
+           color = unlist(color_markers)) %>%
+  ggplot2::ggplot(., aes(x = cell_type, y = 0, fill = cell_type)) +
+  ggplot2::geom_point(pch = 21, size = 5) +
+  ggplot2::scale_fill_manual(values = unlist(color_markers), breaks = names(color_markers)) +
+  ggplot2::theme_classic() +
+  ggplot2::theme(legend.position = "none",
+                 axis.line = element_blank(),
+                 axis.title = element_blank(),
+                 axis.ticks = element_blank(),
+                 axis.text.y = element_blank(),
+                 axis.text.x = element_text(angle = 30, hjust = 1))
+```
+
+This is the projection of interest :
+
+```{r name2D}
+name2D = "harmony_38_tsne"
+```
+
+We design a custom function to make a histogram and a wordcloud to visualize differentially expressed genes :
+
+```{r hist_wc_fun, class.souce = "fold-hide"}
+hist_wc_fun = function(mark, col) {
+  cut_colors = c("firebrick4", "firebrick2", "indianred1", "darksalmon",
+                 "lightpink", "gray50", "khaki3", "darkolivegreen1",
+                 "olivedrab1", "chartreuse2", "chartreuse4")
+  cut_colors_cont = c(rev(RColorBrewer::brewer.pal(name = "Reds", n = 9)[c(5:9)]),
+                      RColorBrewer::brewer.pal(name = "Greens", n = 9)[c(5:9)])
+  
+  if (col == "pct.1") {
+    mark$pct = mark$pct.1
+    mark$pct_cut = mark$pct.1_cut
+  } else if (col == "pct.2") {
+    mark$pct = mark$pct.2
+    mark$pct_cut = mark$pct.2_cut
+    cut_colors = rev(cut_colors)
+    cut_colors_cont = rev(cut_colors_cont)
+  } else {
+    stop("col must be either pct.1 or pct.2")
+  }
+  
+  p_hist = ggplot2::ggplot(mark, mapping = aes(x = avg_logFC, fill = pct_cut)) +
+    ggplot2::geom_histogram(binwidth = 0.05) +
+    ggplot2::scale_fill_manual(breaks = levels(mark$pct_cut),
+                               values = cut_colors,
+                               name = paste0(col, "_cut")) +
+    ggplot2::theme_classic()
+  
+  p_wc = ggplot2::ggplot(mark, aes(label = gene_name, size = avg_logFC, color = pct)) +
+    ggwordcloud::geom_text_wordcloud_area(show.legend = TRUE, seed = 1) +
+    ggplot2::scale_color_gradientn(colors = cut_colors_cont,
+                                   name = col) +
+    ggplot2::scale_size_area(max_size = 5) +
+    ggplot2::theme_minimal() +
+    ggplot2::guides(size = "none")
+  
+  p = patchwork::wrap_plots(p_hist, p_wc, nrow = 1)
+  
+  return(p)
+}
+```
+
+
+# Visualization
+
+## Gene expression
+
+We visualize gene expression for some markers :
+
+```{r plot_list_features, fig.width = 12, fig.height = 4}
+features = c("percent.mt", "percent.rb", "nFeature_RNA")
+
+plot_list = lapply(features, FUN = function(one_gene) {
+  Seurat::FeaturePlot(sobj, features = one_gene,
+                      reduction = name2D) +
+    ggplot2::theme(aspect.ratio = 1) +
+    ggplot2::scale_color_gradientn(colors = aquarius::color_gene) +
+    Seurat::NoAxes()
+})
+
+patchwork::wrap_plots(plot_list, ncol = 3)
+```
+Cluster type Clusters and cell type
+
+We visualize clusters and cell type :
+
+```{r see_clustering, fig.width = 12, fig.height = 4}
+cluster_plot = Seurat::DimPlot(sobj, group.by = "seurat_clusters",
+                               reduction = name2D, label = TRUE) +
+  ggplot2::labs(title = "Cluster ID") +
+  Seurat::NoAxes() +
+  ggplot2::theme(aspect.ratio = 1,
+                 plot.title = element_text(hjust = 0.5))
+
+cell_type_plot = Seurat::DimPlot(sobj, group.by = "cell_type",
+                                 reduction = name2D, label = FALSE) +
+  ggplot2::scale_color_manual(values = color_markers,
+                              breaks = names(color_markers)) +
+  ggplot2::labs(title = "Cell type") +
+  Seurat::NoAxes() +
+  ggplot2::theme(aspect.ratio = 1,
+                 plot.title = element_text(hjust = 0.5))
+
+cell_type_plot | cluster_plot
+```
+
+We summarize major cell type by cluster :
+
+```{r cell_type_clusters}
+cell_type_clusters = sobj@meta.data[, c("cell_type", "seurat_clusters")] %>%
+  table() %>%
+  prop.table(., margin = 2) %>%
+  apply(., 2, which.max)
+cell_type_clusters = setNames(levels(sobj$cell_type)[cell_type_clusters],
+                              nm = names(cell_type_clusters))
+
+```
+
+We define cluster type :
+
+```{r table_cluster_type}
+sobj$cluster_type = cell_type_clusters[sobj$seurat_clusters] %>%
+  as.factor()
+table(sobj$cluster_type, sobj$cell_type)
+```
+
+We compare cluster annotation and cell type annotation :
+
+```{r see_cluster_type, fig.width = 10, fig.height = 5}
+cell_type_plot
+
+p2 = Seurat::DimPlot(sobj, group.by = "cluster_type",
+                     reduction = name2D, cols = color_markers) +
+  ggplot2::labs(title = "Cluster type") +
+  Seurat::NoAxes() +
+  ggplot2::theme(aspect.ratio = 1,
+                 plot.title = element_text(hjust = 0.5))
+
+patchwork::wrap_plots(cell_type_plot, p2, guides = "collect")
+```
+
+There is mis-annotation, so we keep the single-cell level cell type annotation.
+
+# Differential expression
+
+In this section, we perform DE between interfollicular epidermis (IFE) basal or outer root sheath (ORS), and all remaining cells. We save the results in a list :
+
+```{r list_results}
+list_results = list()
+```
+
+We change cell identities to cell type :
+
+```{r ident_cell_type}
+Seurat::Idents(sobj) = sobj$cell_type
+
+table(Seurat::Idents(sobj))
+```
+
+## ORS markers
+
+In this section, we compared ORS to other cells.
+
+```{r see_ORS, fig.width = 6, fig.height = 4}
+group_name = "ORS_vs_all"
+
+aquarius::plot_red_and_blue(sobj,
+                            group1 = "ORS",
+                            reduction = name2D) +
+  ggplot2::labs(title = group_name)
+```
+
+### Differential expression
+
+We identify specific markers for each population :
+
+```{r de_ORS}
+mark = Seurat::FindMarkers(sobj, ident.1 = "ORS")
+
+mark = mark %>%
+  dplyr::filter(p_val_adj < 0.05) %>%
+  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
+mark$gene_name = rownames(mark)
+
+list_results[[group_name]]$mark = mark
+
+dim(mark)
+head(mark, n = 20)
+```
+
+How many genes enriched in ORS ?
+
+```{r mark_ORS}
+mark_ORS = mark %>%
+  dplyr::filter(avg_logFC > 0)
+
+nrow(mark_ORS)
+```
+
+We cut pct.1 and pct.2 by bins of 0.1 :
+
+```{r mark_cut_ORS}
+mark_ORS$pct.1_cut = cut(mark_ORS$pct.1, breaks = 10)
+mark_ORS$pct.2_cut = cut(mark_ORS$pct.2, breaks = 10)
+
+head(mark_ORS)
+```
+
+
+### Visualization
+
+We make a histogram for `pct.1`, `pct.2` and `avg_logFC`.
+
+```{r hist_fc_ORS_1, fig.width = 13, fig.height = 5}
+hist_wc_fun(mark_ORS, "pct.1")
+```
+
+```{r hist_fc_ORS_2, fig.width = 13, fig.height = 5}
+hist_wc_fun(mark_ORS, "pct.2")
+```
+
+### Selection
+
+The best markers have high pct.1 and low pct.2 :
+
+```{r mark_ORS_select}
+mark_ORS = mark_ORS %>%
+  dplyr::filter(pct.1 > 0.6 & pct.2 < 0.3)
+
+list_results[[group_name]]$choosen_ones = mark_ORS
+
+mark_ORS
+```
+
+We visualize expression levels of those genes on the projection :
+
+```{r mark_ORS_select_see, fig.width = 12, fig.height = 6}
+plot_list = lapply(rownames(mark_ORS), FUN = function(one_gene) {
+  Seurat::FeaturePlot(sobj, features = one_gene,
+                      reduction = name2D) +
+    ggplot2::theme(aspect.ratio = 1) +
+    ggplot2::scale_color_gradientn(colors = aquarius::color_gene) +
+    Seurat::NoAxes()
+})
+
+patchwork::wrap_plots(plot_list, ncol = 3)
+```
+
+## IFEb markers
+
+In this section, we compared IFEb to other cells.
+
+```{r see_IFEb, fig.width = 6, fig.height = 4}
+group_name = "IFEb_vs_all"
+
+aquarius::plot_red_and_blue(sobj,
+                            group1 = "IFE basal",
+                            reduction = name2D) +
+  ggplot2::labs(title = group_name)
+```
+
+### Differential expression
+
+We identify specific markers for each population :
+
+```{r de_IFEb}
+mark = Seurat::FindMarkers(sobj, ident.1 = "IFE basal")
+
+mark = mark %>%
+  dplyr::filter(p_val_adj < 0.05) %>%
+  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
+mark$gene_name = rownames(mark)
+
+list_results[[group_name]]$mark = mark
+
+dim(mark)
+head(mark, n = 20)
+```
+
+How many genes enriched in IFEb ?
+
+```{r mark_IFEb}
+mark_IFEb = mark %>%
+  dplyr::filter(avg_logFC > 0)
+
+nrow(mark_IFEb)
+```
+
+We cut pct.1 and pct.2 by bins of 0.1 :
+
+```{r mark_cut_IFEb}
+mark_IFEb$pct.1_cut = cut(mark_IFEb$pct.1, breaks = 10)
+mark_IFEb$pct.2_cut = cut(mark_IFEb$pct.2, breaks = 10)
+
+head(mark_IFEb)
+```
+
+
+### Visualization
+
+We make a histogram for `pct.1`, `pct.2` and `avg_logFC`.
+
+```{r hist_fc_IFEb_1, fig.width = 13, fig.height = 5}
+hist_wc_fun(mark_IFEb, "pct.1")
+```
+
+```{r hist_fc_IFEb_2, fig.width = 13, fig.height = 5}
+hist_wc_fun(mark_IFEb, "pct.2")
+```
+
+### Selection
+
+The best markers have high pct.1 and low pct.2 :
+
+```{r mark_IFEb_select}
+mark_IFEb = mark_IFEb %>%
+  dplyr::filter(pct.1 > 0.6 & pct.2 < 0.2)
+
+list_results[[group_name]]$choosen_ones = mark_IFEb
+
+mark_IFEb
+```
+
+We visualize expression levels of those genes on the projection :
+
+```{r mark_IFEb_select_see, fig.width = 12, fig.height = 12}
+plot_list = lapply(rownames(mark_IFEb), FUN = function(one_gene) {
+  Seurat::FeaturePlot(sobj, features = one_gene,
+                      reduction = name2D) +
+    ggplot2::theme(aspect.ratio = 1) +
+    ggplot2::scale_color_gradientn(colors = aquarius::color_gene) +
+    Seurat::NoAxes()
+})
+
+patchwork::wrap_plots(plot_list, ncol = 3)
+```
+
+
+# Save
+
+We save the list of results :
+
+```{r save_list_results}
+saveRDS(list_results, file = paste0(out_dir, "/ors_ifeb_markers.rds"))
+```
+
+We also save as XLSX file :
+
+```{r save_list_results2}
+list_results2 = list(ORS_vs_all = list_results$ORS_vs_all$mark,
+                     ORS_vs_all_selection = list_results$ORS_vs_all$choosen_ones,
+                     IFEb_vs_all = list_results$IFEb_vs_all$mark,
+                     IFEb_vs_all_selection = list_results$IFEb_vs_all$choosen_ones)
+
+openxlsx::write.xlsx(list_results2, file = paste0(out_dir, "/ors_vs_ifeb_markers.xlsx"))
+```
+
+
+# R Session
+
+```{r sessioninfo, echo = FALSE, fold_output = TRUE}
+sessionInfo()
+```
+

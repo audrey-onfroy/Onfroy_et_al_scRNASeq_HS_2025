@@ -86,7 +86,6 @@ library(dplyr)
 library(patchwork)
 library(ggplot2)
 library(ComplexHeatmap)
-library(org.Mm.eg.db)
 
 .libPaths()
 ```
@@ -120,7 +119,7 @@ graphics::pie(rep(1, nrow(sample_info)),
 
 Here are custom colors for each cell type :
 
-```{r color_markers, fig.width = 10, fig.height = 1, class.source = "fold-hide"}
+```{r color_markers, fig.width = 10, fig.height = 1.2, class.source = "fold-hide"}
 color_markers = readRDS(paste0(out_dir, "/../../1_metadata/hs_hd_color_markers.rds"))
 
 data.frame(cell_type = names(color_markers),
