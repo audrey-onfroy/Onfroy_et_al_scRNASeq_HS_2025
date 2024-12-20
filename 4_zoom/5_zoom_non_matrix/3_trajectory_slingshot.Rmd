@@ -1,6 +1,6 @@
 ---
 title: "HS project"
-subtitle: "Trajectory from HFSCs using slinghshot"
+subtitle: "Trajectory from HF-SCs using slinghshot"
 author: "Audrey"
 date: "`r format(Sys.time(), '%Y-%m-%d')`"
 output:
@@ -79,7 +79,7 @@ knitr::opts_chunk$set(echo = TRUE, # display code
                       time_it = FALSE)
 ```
 
-This script is used to infer trajectory from HFSCs, using slingshot
+This script is used to infer trajectory from HF-SCs, using slingshot
 
 ```{r library}
 library(dplyr)
@@ -95,7 +95,7 @@ library(ggplot2)
 In this section, we set the global settings of the analysis. We will store data there :
 
 ```{r out_dir}
-save_name = "hfsc_iblmors"
+save_name = "non_matrix"
 out_dir = "."
 ```
 
