@@ -139,7 +139,7 @@ data.frame(cell_type = names(color_markers),
 This is the projection of interest :
 
 ```{r name2D}
-name2D = "harmony_23_tsne"
+name2D = "harmony_22_tsne"
 ```
 
 We design a custom function to make the GSEA plot and a word cloud graph :
@@ -212,7 +212,7 @@ make_gsea_plot = function(gsea_results, gs_oi, fold_change, metric = "FC") {
 We visualize gene expression for some markers :
 
 ```{r plot_list_features, fig.width = 12, fig.height = 7}
-features = c("percent.mt", "nFeature_RNA", "TOP2A",
+features = c("percent.mt", "nFeature_RNA", "TK1",
              "SPINK5", "KRT1", "KRTDAP")
 
 plot_list = lapply(features, FUN = function(one_gene) {
@@ -242,14 +242,16 @@ cluster_plot
 KRT1 and KRTDAP being specifically expressed in IFE spinous, we make a cluster annotation:
 
 ```{r cluster_type}
-sobj$cluster_type = ifelse(sobj$seurat_clusters %in% c(0,7,5),
-                           yes = "IFE spinous",
-                           no = "IFE granular")
-sobj$cluster_type = ifelse(sobj$seurat_clusters == 10,
-                           yes = "IFE proliferative",
-                           no = sobj$cluster_type)
-cluster_color = setNames(nm = c("IFE spinous", "IFE granular", "IFE proliferative"),
-                         c("steelblue4", "lightskyblue", "gray50"))
+sobj$cluster_type = case_when(
+  sobj$seurat_clusters %in% c(5,6) ~ "IFE proliferative",
+  sobj$seurat_clusters %in% c(1,2,3) ~ "IFE spinous",
+  sobj$seurat_clusters %in% c(0,4) ~ "IFE granular",
+  TRUE ~ "others") %>% # others: 8,9,7,0
+  factor(., levels = c("IFE spinous", "IFE granular",
+                       "IFE proliferative", "others"))
+
+cluster_color = setNames(nm = c("IFE spinous", "IFE granular", "IFE proliferative", "others"),
+                         c("steelblue4", "lightskyblue", "gray50", "gray10"))
 ```
 
 We visualize the cluster annotation split by sample :
@@ -323,6 +325,13 @@ group_name = "granular_vs_spinous"
 
 Seurat::Idents(sobj) = sobj$cluster_type
 table(Seurat::Idents(sobj))
+```
+
+We visualize these populations :
+
+```{r see_red_blue, fig.width = 7, fig.height = 7}
+aquarius::plot_red_and_blue(sobj, reduction = name2D,
+                            group1 = "IFE granular", group2 = "IFE spinous")
 ```
 
 ### DE
@@ -475,15 +484,13 @@ head(sobj@meta.data)
 We visualize the scores as violin plots :
 
 ```{r see_score_gsea, fig.width = 12, fig.height = 12}
-plot_list = lapply(new_columns, FUN = function(one_gs) {
-  gs_name = stringr::str_remove(one_gs, pattern = "score_")
-  
-  p = Seurat::VlnPlot(sobj, features = one_gs,
+plot_list = lapply(gs_oi, FUN = function(one_gs) {
+  p = Seurat::VlnPlot(sobj, features = paste0("score_", one_gs),
                       group.by = "cluster_type",
                       split.by = "sample_type") +
     ggplot2::scale_fill_manual(values = c("#C55F40", "#2C78E6"),
-                                breaks = c("HS", "HD")) +
-    ggplot2::labs(title = gs_name) +
+                               breaks = c("HS", "HD")) +
+    ggplot2::labs(title = one_gs) +
     ggplot2::theme(axis.title.x = element_blank())
   
   return(p)
@@ -652,15 +659,13 @@ head(sobj@meta.data)
 We visualize the scores as violin plots :
 
 ```{r see_score_gsea2, fig.width = 12, fig.height = 12}
-plot_list = lapply(new_columns, FUN = function(one_gs) {
-  gs_name = stringr::str_remove(one_gs, pattern = "score_")
-  
-  p = Seurat::VlnPlot(sobj, features = one_gs,
+plot_list = lapply(gs_oi, FUN = function(one_gs) {
+  p = Seurat::VlnPlot(sobj, features = paste0("score_", one_gene_set),
                       group.by = "cluster_type",
                       split.by = "sample_type") +
     ggplot2::scale_fill_manual(values = c("#C55F40", "#2C78E6"),
-                                breaks = c("HS", "HD")) +
-    ggplot2::labs(title = gs_name) +
+                               breaks = c("HS", "HD")) +
+    ggplot2::labs(title = one_gs) +
     ggplot2::theme(axis.title.x = element_blank())
   
   return(p)

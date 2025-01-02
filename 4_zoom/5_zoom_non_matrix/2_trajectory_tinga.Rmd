@@ -113,9 +113,10 @@ This are the settings for trajectory inference :
 
 ```{r traj_settings}
 traj_dimred = "harmony"      # to infer trajectory on
-traj_umap = "harmony_dm"     # just of visualization
+traj_2d = "harmony_dm"       # just of visualization
 seed = 1337L
 traj_max_dims = 40           # to infer trajectory on
+name2D = "harmony_18_tsne"   # just of visualization
 ```
 
 We load the Seurat object :
@@ -133,7 +134,7 @@ We set the root manually :
 root_cell_id = "2022_14_GAACACTAGTGCCTCG-1"
 sobj$is_root = colnames(sobj) == root_cell_id
 sobj$cell_name = colnames(sobj)
-root_plot = aquarius::plot_label_dimplot(sobj, reduction = traj_umap,
+root_plot = aquarius::plot_label_dimplot(sobj, reduction = traj_2d,
                                          col_by = "is_root", col_color = c("gray80", "red"),
                                          label_by = "cell_name", label_val = root_cell_id) +
   ggplot2::ggtitle("Root cell") +
@@ -162,7 +163,7 @@ my_traj = aquarius::traj_tinga(sobj,
                                dimred_name = traj_dimred,
                                dimred_max_dim = traj_max_dims,
                                root_cell_id = root_cell_id,
-                               tinga_parameters = list(max_nodes = 10))
+                               tinga_parameters = list(max_nodes = 3))
 
 ## Add pseudotime
 sobj$pseudotime = my_traj$pseudotime
@@ -170,14 +171,16 @@ sobj$pseudotime = my_traj$pseudotime
 
 # Visualization
 
+## On the diffusion map
+
 We visualize pseudotime :
 
 ```{r pseudotime1, fig.width = 8, fig.height = 8}
 Seurat::FeaturePlot(sobj, features = "pseudotime",
-                    reduction = traj_umap,
+                    reduction = traj_2d,
                     cols = viridis::viridis(n = 100)) +
-  ggplot2::lims(x = range(sobj@reductions[[traj_umap]]@cell.embeddings[, 1]),
-                y = range(sobj@reductions[[traj_umap]]@cell.embeddings[, 2])) +
+  ggplot2::lims(x = range(sobj@reductions[[traj_2d]]@cell.embeddings[, 1]),
+                y = range(sobj@reductions[[traj_2d]]@cell.embeddings[, 2])) +
   ggplot2::labs(title = "Pseudotime") +
   ggplot2::theme(aspect.ratio = 1,
                  plot.title = element_text(hjust = 0.5)) +
@@ -191,7 +194,7 @@ dynplot::plot_dimred(trajectory = my_traj,
                      label_milestones = FALSE,
                      size_milestones = 0,
                      plot_trajectory = TRUE,
-                     dimred = sobj[[traj_umap]]@cell.embeddings,
+                     dimred = sobj[[traj_2d]]@cell.embeddings,
                      color_cells = 'pseudotime', color_trajectory = "none")
 ```
 
@@ -201,22 +204,48 @@ We color cells according to cluster ID :
 dynplot::plot_dimred(trajectory = my_traj,
                      label_milestones = FALSE,
                      plot_trajectory = TRUE,
-                     dimred = sobj[[traj_umap]]@cell.embeddings,
+                     dimred = sobj[[traj_2d]]@cell.embeddings,
                      grouping = sobj$seurat_clusters,
                      size_milestones = 0,
                      color_trajectory = "none")
 ```
 
-We color cells according to gene expression :
+## On the tSNE
 
-```{r plot_dimred_gene, fig.width = 12, fig.height = 12}
+We visualize pseudotime :
+
+```{r pseudotime1_tsne, fig.width = 8, fig.height = 8}
+Seurat::FeaturePlot(sobj, features = "pseudotime",
+                    reduction = name2D,
+                    cols = viridis::viridis(n = 100)) +
+  ggplot2::lims(x = range(sobj@reductions[[name2D]]@cell.embeddings[, 1]),
+                y = range(sobj@reductions[[name2D]]@cell.embeddings[, 2])) +
+  ggplot2::labs(title = "Pseudotime") +
+  ggplot2::theme(aspect.ratio = 1,
+                 plot.title = element_text(hjust = 0.5)) +
+  Seurat::NoAxes()
+```
+
+We visualize the trajectory with arrows :
+
+```{r plot_dimred_tsne, fig.width = 12, fig.height = 12}
 dynplot::plot_dimred(trajectory = my_traj,
                      label_milestones = FALSE,
                      size_milestones = 0,
                      plot_trajectory = TRUE,
-                     dimred = sobj[[traj_umap]]@cell.embeddings,
-                     feature_oi = "EPCAM",
-                     expression_source = Matrix::t(sobj@assays$RNA@data),
+                     dimred = sobj[[name2D]]@cell.embeddings,
+                     color_cells = 'pseudotime', color_trajectory = "none")
+```
+
+We color cells according to cluster ID :
+
+```{r plot_dimred_cluster_tsne, fig.width = 12, fig.height = 12}
+dynplot::plot_dimred(trajectory = my_traj,
+                     label_milestones = FALSE,
+                     plot_trajectory = TRUE,
+                     dimred = sobj[[name2D]]@cell.embeddings,
+                     grouping = sobj$seurat_clusters,
+                     size_milestones = 0,
                      color_trajectory = "none")
 ```
 

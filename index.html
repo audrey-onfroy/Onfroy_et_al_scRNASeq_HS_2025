@@ -9,7 +9,7 @@
     </script>
     <link rel="stylesheet" href="./index_layout/style.css">
     <link rel="icon" type="image/x-icon" href="./index_layout/logo/favicon.ico">
-    <title>Hidradenitis Suppurativa</title>
+    <title>Hidradenitis suppurativa</title>
 </head>
 
 <body>
@@ -37,12 +37,12 @@
 
             <!-- TITLE -->
             <div class="title">
-                <a href='index.html' title='Home'>Single-cell RNA-Seq in the context of Hidradenitis Suppurativa (HS)</a>
+                <a href='index.html' title='Home'>Single-cell RNA-Seq in the context of <i>Hidradenitis suppurativa</i> (HS)</a>
             </div>
 
             <!-- GITHUB LINK -->
             <div class="right-corner">
-                <a class="github" href="https://github.com/audrey-onfroy/scrnaseq_hair_follicles_hidradenitis_suppurativa" title="Github"></a>
+                <a class="github" href="https://github.com/audrey-onfroy" title="Github"></a>
             </div>
         </div>
 
@@ -53,11 +53,15 @@
 
                 <!-- COPY PASTE MENU THERE -->
                 <ul>
+
+                    <!-- GSE273109 dataset (our) -->
                     <li><button id='./0_intro/welcome.html' class='ulli_button' onClick="changeIframe('./0_intro/welcome.html')">Welcome</button></li>
                     <br>
+
                     <li><button id='./1_metadata/1_build_metadata.html' class='ulli_button' onClick="changeIframe('./1_metadata/1_build_metadata.html')">Metadata</button></li>
                     <br>
-                    <li><a onClick="toggleSwitch(this)">Individual samples &#9662;</a>
+
+                    <li><a onClick="toggleSwitch(this)">Individual datasets &#9662;</a>
                         <ul style="display:none">
                             <li><button id='./2_individual/2021_31.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_31.html')">2021_31</button></li>
                             <li><button id='./2_individual/2021_36.html' class='ulli_button' onClick="changeIframe('./2_individual/2021_36.html')">2021_36</button></li>
@@ -69,88 +73,147 @@
                         </ul>
                     </li>
                     <br>
-                    <li>Combined datasets</li>
-                    <ul>
-                        <li><button id='./3_combined/1_combined_all.html' class='ulli_button' onClick="changeIframe('./3_combined/1_combined_all.html')">Atlas</button></li>
-                        <li><button id='./3_combined/2_ibl_ors_markers.html' class='ulli_button' onClick="changeIframe('./3_combined/2_ibl_ors_markers.html')">IBL and mORS signature</button></li>
-                        <li><button id='./3_combined/3_combined_us_wu_takahashi.html' class='ulli_button' onClick="changeIframe('./3_combined/3_combined_us_wu_takahashi.html')">Three datasets</button></li>
-                    </ul>
-                    <br>
 
-                    <li><a onClick="toggleSwitch(this)">Zoom &#9662;</a>
+                    <li>Combined
                         <ul>
-                            <li>Immune cells</li>
-                            <ul>
-                                <li><button id='./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html')">Dataset</button></li>
-                                <li><button id='./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html')">Analysis</button></li>
-                            </ul>
-                            <li>HFSCs</li>
-                            <ul>
-                                <li><button id='./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html')">Dataset</button></li>
-                                <li><button id='./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html')">Analysis</button></li>
-                            </ul>
-                            <li>IBL + ORS</li>
-                            <ul>
-                                <li><button id='./4_zoom/3_zoom_iblmors/1_zoom_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_iblmors/1_zoom_iblmors_dataset.html')">Dataset</button></li>
-                                <li><button id='./4_zoom/3_zoom_iblmors/2_zoom_iblmors_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_iblmors/2_zoom_iblmors_analysis.html')">Analysis</button></li>
-                            </ul>
-                            <li>HFSCs + IBL + ORS</li>
-                            <ul>
-                                <li><button id='./4_zoom/4_zoom_hfsc_iblmors/1_zoom_hfsc_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/1_zoom_hfsc_iblmors_dataset.html')">Dataset</button></li>
-                                <li><button id='./4_zoom/4_zoom_hfsc_iblmors/2_trajectory_tinga.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/2_trajectory_tinga.html')">Trajectory (TInGa)</button></li>
-                                <li><button id='./4_zoom/4_zoom_hfsc_iblmors/3_trajectory_slingshot.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_hfsc_iblmors/3_trajectory_slingshot.html')">Trajectory (slingshot)</button></li>
-                            </ul>
-                            <li>Matrix</li>
-                            <ul>
-                                <li><button id='./4_zoom/5_zoom_matrix/1_zoom_matrix_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/5_zoom_matrix/1_zoom_matrix_dataset.html')">Dataset</button></li>
-                                <li><button id='./4_zoom/5_zoom_matrix/2_zoom_matrix_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/5_zoom_matrix/2_zoom_matrix_analysis.html')">Analysis</button></li>
-                            </ul>
+                            <li><button id='./3_combined/1_combined_all.html' class='ulli_button' onClick="changeIframe('./3_combined/1_combined_all.html')">Atlas</button></li>
+                            <li><button id='./3_combined/2_combined_three_data.html' class='ulli_button' onClick="changeIframe('./3_combined/2_combined_three_data.html')">Our + Wu + Takahashi</button></li>
+                            <li><button id='./3_combined/3_ors_ifeb_markers.html' class='ulli_button' onClick="changeIframe('./3_combined/3_ors_ifeb_markers.html')">ORS et IFEb markers</button></li>
                         </ul>
                     </li>
                     <br>
+
+                    <li>Zoom in...
+                        <ul>
+                            <li><a onClick="toggleSwitch(this)">Immune cells &#9662;</a>
+                                <ul style="display:none">
+                                    <li><button id='./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/1_zoom_immune_dataset.html')">Dataset</button></li>
+                                    <li><button id='./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/1_zoom_immune/2_zoom_immune_analysis.html')">Analysis</button></li>
+                                </ul>
+                            </li>
+
+                            <li><a onClick="toggleSwitch(this)">HF-SCs &#9662;</a>
+                                <ul style="display:none">
+                                    <li><button id='./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html')">Dataset</button></li>
+                                    <li><button id='./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html')">Analysis</button></li>
+                                </ul>
+                            </li>
+
+                            <li><a onClick="toggleSwitch(this)">ORS et IFE basal &#9662;</a>
+                                <ul style="display:none">
+                                    <li><button id='./4_zoom/3_zoom_ors_ifeb/1_zoom_ors_ifeb_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_ors_ifeb/1_zoom_ors_ifeb_dataset.html')">Dataset</button></li>
+                                    <li><button id='./4_zoom/3_zoom_ors_ifeb/2_zoom_ors_ifeb_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/3_zoom_ors_ifeb/2_zoom_ors_ifeb_analysis.html')">Analysis</button></li>
+                                </ul>
+                            </li>
+
+                            <li><a onClick="toggleSwitch(this)">IFE granular/spinous &#9662;</a>
+                                <ul style="display:none">
+                                    <li><button id='./4_zoom/4_zoom_ifegs/1_zoom_ifegs_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_ifegs/1_zoom_ifegs_dataset.html')">Dataset</button></li>
+                                    <li><button id='./4_zoom/4_zoom_ifegs/2_zoom_ifegs_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/4_zoom_ifegs/2_zoom_ifegs_analysis.html')">Analysis</button></li>
+                                </ul>
+                            </li>
+
+                            <li><a onClick="toggleSwitch(this)">Non matrix cells &#9662;</a>
+                                <ul style="display:none">
+                                    <li><button id='./4_zoom/5_zoom_non_matrix/1_zoom_non_matrix_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/5_zoom_non_matrix/1_zoom_non_matrix_dataset.html')">Dataset</button></li>
+                                    <li><button id='./4_zoom/5_zoom_non_matrix/2_trajectory_tinga.html' class='ulli_button' onClick="changeIframe('./4_zoom/5_zoom_non_matrix/2_trajectory_tinga.html')">Trajectory (TInGa)</button></li>
+                                    <li><button id='./4_zoom/5_zoom_non_matrix/3_trajectory_slingshot.html' class='ulli_button' onClick="changeIframe('./4_zoom/5_zoom_non_matrix/3_trajectory_slingshot.html')">Trajectory (slingshot)</button></li>
+                                </ul>
+                            </li>
+
+                            <li><a onClick="toggleSwitch(this)">Matrix cells &#9662;</a>
+                                <ul style="display:none">
+                                    <li><button id='./4_zoom/6_zoom_matrix/1_zoom_matrix_dataset.html' class='ulli_button' onClick="changeIframe('./4_zoom/6_zoom_matrix/1_zoom_matrix_dataset.html')">Dataset</button></li>
+                                    <li><button id='./4_zoom/6_zoom_matrix/2_zoom_matrix_analysis.html' class='ulli_button' onClick="changeIframe('./4_zoom/6_zoom_matrix/2_zoom_matrix_analysis.html')">Analysis</button></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                    <br>
+
+                    <!-- OEP002321 dataset (Wu) -->
                     <li><a onClick="toggleSwitch(this)">OEP002321 dataset &#9662;</a>
                         <ul style="display:none">
                             <li><button id='./5_wu/1_metadata/1_build_metadata.html' class='ulli_button' onClick="changeIframe('./5_wu/1_metadata/1_build_metadata.html')">Metadata</button></li>
-                            <li>Individual datasets</li>
+                            <li><a onClick="toggleSwitch(this)">Individual datasets &#9662;</a>
+                                <ul style="display:none">
+                                    <li><button id='./5_wu/2_individual/F18.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F18.html')">F18</button></li>
+                                    <li><button id='./5_wu/2_individual/F31B.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F31B.html')">F31B</button></li>
+                                    <li><button id='./5_wu/2_individual/F31W.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F31W.html')">F31W</button></li>
+                                    <li><button id='./5_wu/2_individual/F59.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F59.html')">F59</button></li>
+                                    <li><button id='./5_wu/2_individual/F62B.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F62B.html')">F62B</button></li>
+                                    <li><button id='./5_wu/2_individual/F62W.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F62W.html')">F62W</button></li>
+                                </ul>
+                            </li>
+                            <li><button id='./5_wu/3_combined/1_combined_all.html' class='ulli_button' onClick="changeIframe('./5_wu/3_combined/1_combined_all.html')">Combined</button></li>
+                            <li>ORS + IFE basal</li>
                             <ul>
-
-                                <li><button id='./5_wu/2_individual/F18.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F18.html')">F18</button></li>
-                                <li><button id='./5_wu/2_individual/F31B.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F31B.html')">F31B</button></li>
-                                <li><button id='./5_wu/2_individual/F31W.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F31W.html')">F31W</button></li>
-                                <li><button id='./5_wu/2_individual/F59.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F59.html')">F59</button></li>
-                                <li><button id='./5_wu/2_individual/F62B.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F62B.html')">F62B</button></li>
-                                <li><button id='./5_wu/2_individual/F62W.html' class='ulli_button' onClick="changeIframe('./5_wu/2_individual/F62W.html')">F62W</button></li>
-                            </ul>
-                            <li><button id='./5_wu/3_combined/1_combined_all.html' class='ulli_button' onClick="changeIframe('./5_wu/3_combined/1_combined_all.html')">Combined dataset</button></li>
-                            <li>IBL + ORS</li>
-                            <ul>
-                                <li><button id='./5_wu/4_ibl_ors/1_zoom_iblmors_dataset.html' class='ulli_button' onClick="changeIframe('./5_wu/4_ibl_ors/1_zoom_iblmors_dataset.html')">Dataset</button></li>
-                                <li><button id='./5_wu/4_ibl_ors/2_zoom_iblmors_analysis.html' class='ulli_button' onClick="changeIframe('./5_wu/4_ibl_ors/2_zoom_iblmors_analysis.html')">Analysis</button></li>
+                                <li><button id='./5_wu/4_ors_ifeb/1_zoom_ors_ifeb_dataset.html' class='ulli_button' onClick="changeIframe('./5_wu/4_ors_ifeb/1_zoom_ors_ifeb_dataset.html')">Dataset</button></li>
+                                <li><button id='./5_wu/4_ors_ifeb/2_zoom_ors_ifeb_analysis.html' class='ulli_button' onClick="changeIframe('./5_wu/4_ors_ifeb/2_zoom_ors_ifeb_analysis.html')">Analysis</button></li>
                             </ul>
                         </ul>
                     </li>
                     <br>
+
+                    <!-- GSE129611 dataset (Takahashi) -->
                     <li><a onClick="toggleSwitch(this)">GSE129611 dataset &#9662;</a>
                         <ul style="display:none">
                             <li><button id='./6_takahashi/1_metadata/1_build_metadata.html' class='ulli_button' onClick="changeIframe('./6_takahashi/1_metadata/1_build_metadata.html')">Metadata</button></li>
-                            <li>Individual datasets</li>
+                            <li><a onClick="toggleSwitch(this)">Individual datasets &#9662;</a>
+                                <ul style="display:none">
+                                    <li><button id='./6_takahashi/2_individual/GSM3717034.html' class='ulli_button' onClick="changeIframe('./6_takahashi/2_individual/GSM3717034.html')">GSM3717034</button></li>
+                                    <li><button id='./6_takahashi/2_individual/GSM3717035.html' class='ulli_button' onClick="changeIframe('./6_takahashi/2_individual/GSM3717035.html')">GSM3717035</button></li>
+                                    <li><button id='./6_takahashi/2_individual/GSM3717036.html' class='ulli_button' onClick="changeIframe('./6_takahashi/2_individual/GSM3717036.html')">GSM3717036</button></li>
+                                    <li><button id='./6_takahashi/2_individual/GSM3717037.html' class='ulli_button' onClick="changeIframe('./6_takahashi/2_individual/GSM3717037.html')">GSM3717037</button></li>
+                                    <li><button id='./6_takahashi/2_individual/GSM3717038.html' class='ulli_button' onClick="changeIframe('./6_takahashi/2_individual/GSM3717038.html')">GSM3717038</button></li>
+                                </ul>
+                            </li>
+                            <li><button id='./6_takahashi/3_combined/1_combined_all.html' class='ulli_button' onClick="changeIframe('./6_takahashi/3_combined/1_combined_all.html')">Combined</button></li>
+                            <li>ORS + IFE basal</li>
                             <ul>
-
-                                <li><button id='./6_takahashi/2_individual/GSM3717034.html' class='ulli_button' onClick="changeIframe('./6_takahashi/2_individual/GSM3717034.html')">GSM3717034</button></li>
-                                <li><button id='./6_takahashi/2_individual/GSM3717035.html' class='ulli_button' onClick="changeIframe('./6_takahashi/2_individual/GSM3717035.html')">GSM3717035</button></li>
-                                <li><button id='./6_takahashi/2_individual/GSM3717036.html' class='ulli_button' onClick="changeIframe('./6_takahashi/2_individual/GSM3717036.html')">GSM3717036</button></li>
-                                <li><button id='./6_takahashi/2_individual/GSM3717037.html' class='ulli_button' onClick="changeIframe('./6_takahashi/2_individual/GSM3717037.html')">GSM3717037</button></li>
-                                <li><button id='./6_takahashi/2_individual/GSM3717038.html' class='ulli_button' onClick="changeIframe('./6_takahashi/2_individual/GSM3717038.html')">GSM3717038</button></li>
+                                <li><button id='./6_takahashi/4_ors_ifeb/1_zoom_ors_ifeb_dataset.html' class='ulli_button' onClick="changeIframe('./6_takahashi/4_ors_ifeb/1_zoom_ors_ifeb_dataset.html')">Dataset</button></li>
+                                <li><button id='./6_takahashi/4_ors_ifeb/2_zoom_ors_ifeb_analysis.html' class='ulli_button' onClick="changeIframe('./6_takahashi/4_ors_ifeb/2_zoom_ors_ifeb_analysis.html')">Analysis</button></li>
                             </ul>
-                            <li><button id='./6_takahashi/3_combined/1_combined_all.html' class='ulli_button' onClick="changeIframe('./6_takahashi/3_combined/1_combined_all.html')">Combined dataset</button></li>
+                        </ul>
+                    </li>
+                    <br>
+
+                    <!-- Figures -->
+                    <li><button id='./7_figures/figures.html' class='ulli_button' onClick="changeIframe('./7_figures/figures.html')">scRNA-Seq figures</button></li>
+                    <br>
+
+                    <!-- Flow cytometry data -->
+                    <li><a onClick="toggleSwitch(this)">Flow cytometry &#9662;</a>
+                        <ul style="display:none">
+                            <li><button id='./8_flow_cytometry/1_metadata/1_build_metadata.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/1_metadata/1_build_metadata.html')">Metadata</button></li>
+                            <li><a onClick="toggleSwitch(this)">Individual datasets &#9662;</a>
+                                <ul style="display:none">
+                                    <li><button id='./8_flow_cytometry/2_individual/AKBA_SH.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/AKBA_SH.html')">AKBA_SH</button></li>
+                                    <li><button id='./8_flow_cytometry/2_individual/GAIL_GL.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/GAIL_GL.html')">GAIL_GL</button></li>
+                                    <li><button id='./8_flow_cytometry/2_individual/GALL_GL.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/GALL_GL.html')">GALL_GL</button></li>
+                                    <li><button id='./8_flow_cytometry/2_individual/GIRI_MA.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/GIRI_MA.html')">GIRI_MA</button></li>
+                                    <li><button id='./8_flow_cytometry/2_individual/ILLE_VE.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/ILLE_VE.html')">ILLE_VE</button></li>
+                                    <li><button id='./8_flow_cytometry/2_individual/MERC_CE.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/MERC_CE.html')">MERC_CE</button></li>
+                                    <li><button id='./8_flow_cytometry/2_individual/NAGE_PR.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/NAGE_PR.html')">NAGE_PR</button></li>
+                                    <li><button id='./8_flow_cytometry/2_individual/ONGO_NI.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/ONGO_NI.html')">ONGO_NI</button></li>
+                                    <li><button id='./8_flow_cytometry/2_individual/SIDI_NE.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/SIDI_NE.html')">SIDI_NE</button></li>
+                                    <li><button id='./8_flow_cytometry/2_individual/SIGN_DO.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/SIGN_DO.html')">SIGN_DO</button></li>
+                                    <li><button id='./8_flow_cytometry/2_individual/VIEI_NA.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/VIEI_NA.html')">VIEI_NA</button></li>
+                                    <li><button id='./8_flow_cytometry/2_individual/VIRI_CH.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/VIRI_CH.html')">VIRI_CH</button></li>
+                                    <li><button id='./8_flow_cytometry/2_individual/VISI_CH.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/VISI_CH.html')">VISI_CH</button></li>
+                                    <li><button id='./8_flow_cytometry/2_individual/WODJ_DO.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/2_individual/WODJ_DO.html')">WODJ_DO</button></li>
+                                </ul>
+                            </li>
+                            <li>Combined
+                                <ul>
+                                    <li><button id='./8_flow_cytometry/3_combined/1_combined_all.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/3_combined/1_combined_all.html')">Atlas</button></li>
+                                    <li><button id='./8_flow_cytometry/3_combined/2_annotation.html' class='ulli_button' onClick="changeIframe('./8_flow_cytometry/3_combined/2_annotation.html')">Annotation</button></li>
+                                </ul>
+                            </li>
                         </ul>
                     </li>
 
-                    <br>
-                    <li><button id='./7_figures/figures.html' class='ulli_button' onClick="changeIframe('./7_figures/figures.html')">Figures</button></li>
                 </ul>
-
-
                 <!-- (END OF) COPY PASTE MENU THERE -->
             </div>
 

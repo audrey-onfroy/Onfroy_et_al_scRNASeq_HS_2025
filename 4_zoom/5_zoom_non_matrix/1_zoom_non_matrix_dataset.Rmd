@@ -1,6 +1,6 @@
 ---
 title: "HS project"
-subtitle: "Zoom in HF-SCs + IFE + ORS"
+subtitle: "Zoom in non-matrix cells"
 author: "Audrey"
 date: "`r format(Sys.time(), '%Y-%m-%d')`"
 output:
@@ -79,7 +79,7 @@ knitr::opts_chunk$set(echo = TRUE, # display code
 ```
 
 
-This file is used to generate a dataset containing hair follicle stem cells (HF-SCs), ORS, IFE basal and IFE granular or spinous. The goal is then to perform trajectory inference.
+This file is used to generate a dataset containing HF-SCs, IFE basal, granular or spinous, and ORS.
 
 ```{r library}
 library(dplyr)
@@ -129,50 +129,92 @@ data.frame(cell_type = names(color_markers),
                  axis.text.x = element_text(angle = 30, hjust = 1))
 ```
 
-```{r subset_color_markers}
-cell_type_oi = c("HF-SCs", "IFE basal", "IFE granular spinous", "ORS")
-color_markers[!(names(color_markers) %in% cell_type_oi)] = "gray92"
-```
-
 
 # Make `r save_name` dataset
 
-We build the dataset by combining the three datasets.
+## Atlas
 
-## Load datasets
+We load the combined dataset containing all cell types from all samples :
 
-We load both datasets :
-
-```{r load_zoomed}
-sobj_hfsc = readRDS(paste0(out_dir, "/../2_zoom_hfsc/hfsc_sobj.rds"))
-sobj_hfsc
-
-sobj_ors_ifeb = readRDS(paste0(out_dir, "/../3_zoom_ors_ifeb/ors_ifeb_sobj.rds"))
-sobj_ors_ifeb
-```
-
-Do they have common metadata ?
-
-```{r same_metadata}
-setdiff(union(colnames(sobj_hfsc@meta.data), colnames(sobj_ors_ifeb@meta.data)),
-        intersect(colnames(sobj_hfsc@meta.data), colnames(sobj_ors_ifeb@meta.data)))
-```
-
-Except clustering-relative features, yes !
-
-## Combined dataset
-
-We merge both objects :
-
-```{r merge_sobj}
-sobj = merge(sobj_hfsc, sobj_ors_ifeb)
+```{r load_atlas}
+sobj = readRDS(paste0(out_dir, "/../../3_combined/hs_hd_sobj.rds"))
 sobj
 ```
 
-We delete them :
+We represent cells in the tSNE :
 
-```{r clean_sobj}
-rm(sobj_hfsc, sobj_ors_ifeb)
+```{r name2D}
+name2D = "harmony_38_tsne"
+```
+
+We smooth cell type annotation at a cluster level :
+
+```{r smooth_annotation}
+cluster_type = table(sobj$cell_type, sobj$seurat_clusters) %>%
+  prop.table(., margin = 2) %>%
+  apply(., 2, which.max)
+cluster_type = setNames(nm = names(cluster_type),
+                        levels(sobj$cell_type)[cluster_type])
+
+sobj$cluster_type = cluster_type[sobj$seurat_clusters]
+```
+
+
+We look gene markers expression level, cell annotation and cluster-smoothed annotation on the projection, to locate `r save_name` cells :
+
+```{r see_matrix_markers, fig.width = 12, fig.height = 3}
+non_matrix_markers = c("KRT14", "COL17A1", "TK1")
+non_matrix_cell_type = c("HF-SCs", "IFE basal", "IFE granular spinous", "ORS")
+color_markers[!(names(color_markers) %in% non_matrix_cell_type)] = "gray92"
+
+# Feature Plot
+plot_list = lapply(non_matrix_markers, FUN = function(one_gene) {
+  p = Seurat::FeaturePlot(sobj, reduction = name2D,
+                          features = one_gene) +
+    Seurat::NoAxes() +
+    ggplot2::scale_color_gradientn(colors = aquarius:::color_gene) +
+    ggplot2::theme(aspect.ratio = 1,
+                   plot.subtitle = element_text(hjust = 0.5))
+  return(p)
+})
+
+# Cell type annotation
+plot_list[[length(plot_list) + 1]] = Seurat::DimPlot(sobj, group.by = "cell_type",
+                                                     cols = color_markers, reduction = name2D,
+                                                     order = save_name) +
+  ggplot2::labs(title = "Cell annotation",
+                subtitle = paste0(sum(sobj$cell_type %in% non_matrix_cell_type),
+                                  " cells")) +
+  Seurat::NoAxes() + Seurat::NoLegend() +
+  ggplot2::theme(aspect.ratio = 1,
+                 plot.title = element_text(hjust = 0.5),
+                 plot.subtitle = element_text(hjust = 0.5))
+
+# Cluster-smoothed annotation
+plot_list[[length(plot_list) + 1]] = Seurat::DimPlot(sobj,
+                                                     reduction = name2D,
+                                                     group.by = "cluster_type") +
+  ggplot2::scale_color_manual(values = c(unname(unlist(color_markers[non_matrix_cell_type])),
+                                         rep("gray92", length(color_markers) - length(non_matrix_cell_type))),
+                              breaks = c(non_matrix_cell_type, setdiff(names(color_markers), non_matrix_cell_type))) +
+  ggplot2::labs(title = "Cluster annotation",
+                subtitle = paste0(sum(sobj$cluster_type %in% non_matrix_cell_type),
+                                  " cells")) +
+  Seurat::NoAxes() + Seurat::NoLegend() +
+  ggplot2::theme(aspect.ratio = 1,
+                 plot.title = element_text(hjust = 0.5),
+                 plot.subtitle = element_text(hjust = 0.5))
+
+patchwork::wrap_plots(plot_list, nrow = 1)
+```
+
+## Combined dataset
+
+We extract cells of interest based on the clustering :
+
+```{r subset_is_of_interest}
+sobj = subset(sobj, cluster_type %in% non_matrix_cell_type)
+sobj
 ```
 
 We remove all things that were calculated based on the full atlas :
@@ -212,7 +254,7 @@ table(sobj$project_name)
 
 We represent this information as a barplot :
 
-```{r barplot_count, fig.width = 8, fig.height = 5}
+```{r barplot_count, fig.width = 12, fig.height = 5}
 aquarius::plot_barplot(df = table(sobj$project_name,
                                   sobj$cell_type) %>%
                          as.data.frame.table() %>%
@@ -323,6 +365,7 @@ umap = Seurat::DimPlot(sobj, group.by = "project_name",
 tsne | umap
 ```
 
+There is a batch-effect.
 
 ### Harmony
 
@@ -388,7 +431,6 @@ umap = Seurat::DimPlot(sobj, group.by = "project_name",
 tsne | umap
 ```
 
-
 ### Diffusion map
 
 We generate a diffusion map from the batch-effect corrected space :
@@ -431,11 +473,12 @@ Seurat::DimPlot(sobj, reduction = umap_name,
   Seurat::NoAxes()
 ```
 
-We will keep the UMAP from DM :
+
+We will keep the tSNE from Harmony :
 
 ```{r set_name2D}
 reduction = "harmony"
-name2D = umap_name
+name2D = paste0("harmony_", ndims, "_tsne")
 ```
 
 ## Clustering
@@ -444,7 +487,7 @@ We generate a clustering :
 
 ```{r clustering2, fig.width = 6, fig.height = 4}
 sobj = Seurat::FindNeighbors(sobj, reduction = reduction, dims = 1:ndims)
-sobj = Seurat::FindClusters(sobj, resolution = 0.5)
+sobj = Seurat::FindClusters(sobj, resolution = 0.9)
 
 dimplot_clusters = Seurat::DimPlot(sobj, reduction = name2D, label = TRUE) +
   Seurat::NoAxes() +
@@ -471,14 +514,46 @@ plot_list = lapply(plot_list, FUN = function(one_plot) {
 patchwork::wrap_plots(plot_list, nrow = 1)
 ```
 
+## Cell type
+
+We smooth cell type annotation at a cluster level :
+
+```{r smooth_annotation2}
+cluster_type = table(sobj$cell_type, sobj$seurat_clusters) %>%
+  prop.table(., margin = 2) %>%
+  apply(., 2, which.max)
+cluster_type = setNames(nm = names(cluster_type),
+                        levels(sobj$cell_type)[cluster_type])
+
+sobj$cluster_type = cluster_type[sobj$seurat_clusters]
+```
+
+We visualize the cluster type annotation :
+
+```{r see_umap_tsne_cell_type, fig.width = 8, fig.height = 4, class.source = "fold-hide"}
+plot_list = lapply(c(paste0("harmony_", ndims, "_tsne"),
+                     paste0("harmony_", ndims, "_umap")), FUN = function(one_proj) {
+                       Seurat::DimPlot(sobj, group.by = "cluster_type",
+                                       reduction = one_proj) +
+                         ggplot2::scale_color_manual(values = color_markers,
+                                                     breaks = names(color_markers)) +
+                         Seurat::NoAxes() + ggplot2::ggtitle(one_proj) +
+                         ggplot2::theme(aspect.ratio = 1,
+                                        plot.title = element_text(hjust = 0.5),
+                                        legend.position = "right")
+                     })
+
+patchwork::wrap_plots(plot_list, ncol = 2) +
+  patchwork::plot_layout(guides = "collect")
+```
+
+## Project name
 
 We can visualize the two batch-effect corrected representations :
 
-```{r see_umap_tsne_all, fig.width = 8, fig.height = 8, class.source = "fold-hide"}
+```{r see_umap_tsne_all, fig.width = 8, fig.height = 4, class.source = "fold-hide"}
 plot_list = lapply(c(paste0("harmony_", ndims, "_tsne"),
-                     paste0("harmony_", ndims, "_umap"),
-                     dm_name, umap_name),
-                   FUN = function(one_proj) {
+                     paste0("harmony_", ndims, "_umap")), FUN = function(one_proj) {
                        Seurat::DimPlot(sobj, group.by = "project_name",
                                        reduction = one_proj) +
                          ggplot2::scale_color_manual(values = sample_info$color,
@@ -492,40 +567,26 @@ plot_list = lapply(c(paste0("harmony_", ndims, "_tsne"),
 patchwork::wrap_plots(plot_list, ncol = 2)
 ```
 
-Same figure colored by cell type :
 
-```{r see_umap_tsne_all_cell_type, fig.width = 8, fig.height = 8, class.source = "fold-hide"}
-plot_list = lapply(c(paste0("harmony_", ndims, "_tsne"),
-                     paste0("harmony_", ndims, "_umap"),
-                     dm_name, umap_name),
-                   FUN = function(one_proj) {
-                       Seurat::DimPlot(sobj, group.by = "cell_type",
-                                       reduction = one_proj, cols = color_markers) +
-                         Seurat::NoAxes() + ggplot2::ggtitle(one_proj) +
-                         ggplot2::theme(aspect.ratio = 1,
-                                        plot.title = element_text(hjust = 0.5),
-                                        legend.position = "none")
-                     })
+## Clusters
 
-patchwork::wrap_plots(plot_list, ncol = 2)
-```
+We can represent clusters, split by sample of origin :
 
-Same figure colored by clusters :
+```{r plot_split_dimred, fig.width = 12, fig.height = 7}
+plot_list = aquarius::plot_split_dimred(sobj,
+                                        reduction = name2D,
+                                        split_by = "sample_identifier",
+                                        group_by = "seurat_clusters",
+                                        split_color = setNames(sample_info$color,
+                                                               nm = sample_info$sample_identifier),
+                                        group_color = aquarius::gg_color_hue(length(levels(sobj$seurat_clusters))),
+                                        main_pt_size = 0.5, bg_pt_size = 0.5)
 
-```{r see_umap_tsne_all_clusters, fig.width = 8, fig.height = 8, class.source = "fold-hide"}
-plot_list = lapply(c(paste0("harmony_", ndims, "_tsne"),
-                     paste0("harmony_", ndims, "_umap"),
-                     dm_name, umap_name),
-                   FUN = function(one_proj) {
-                       Seurat::DimPlot(sobj, group.by = "seurat_clusters", label = TRUE,
-                                       reduction = one_proj) +
-                         Seurat::NoAxes() + ggplot2::ggtitle(one_proj) +
-                         ggplot2::theme(aspect.ratio = 1,
-                                        plot.title = element_text(hjust = 0.5),
-                                        legend.position = "none")
-                     })
+plot_list[[length(plot_list) + 1]] = dimplot_clusters
 
-patchwork::wrap_plots(plot_list, ncol = 2)
+patchwork::wrap_plots(plot_list, ncol = 4) +
+  patchwork::plot_layout(guides = "collect") &
+  ggplot2::theme(legend.position = "none")
 ```
 
 # Save

@@ -260,7 +260,7 @@ graphics::pie(table(sobj$project_name),
               labels = sample_info$project_name)
 ```
 
-## Pprojection
+## Projection
 
 We remove genes that are expressed in less than 5 cells :
 

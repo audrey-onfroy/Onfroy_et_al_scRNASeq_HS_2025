@@ -208,7 +208,7 @@ plot_list[[length(plot_list) + 1]] = Seurat::DimPlot(sobj,
 patchwork::wrap_plots(plot_list, nrow = 1)
 ```
 
-We extract cells based on the cluster annotation and the single cell level annotation.
+We extract cells based on the cell type annotation and cluster annotation. We also add the cluster 24 which corresponds to proliferative cells.
 
 ## Combined dataset
 
@@ -216,7 +216,8 @@ We extract cells of interest based on the clustering :
 
 ```{r subset_is_of_interest}
 sobj$of_interest = (sobj$cluster_type %in% ifegs_cell_type) |
-  (sobj$cell_type %in% ifegs_cell_type)
+  (sobj$cell_type %in% ifegs_cell_type) |
+  (sobj$seurat_clusters %in% "24")
 
 sobj = subset(sobj, of_interest == TRUE)
 sobj

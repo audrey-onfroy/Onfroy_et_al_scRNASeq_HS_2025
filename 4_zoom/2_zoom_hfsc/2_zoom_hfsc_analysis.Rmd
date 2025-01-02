@@ -142,6 +142,68 @@ This is the projection of interest :
 name2D = "harmony_24_tsne"
 ```
 
+We design a custom function to make the GSEA plot and a word cloud graph :
+
+```{r make_gsea_plot, class.source = "fold-hide"}
+make_gsea_plot = function(gsea_results, gs_oi, fold_change, metric = "FC") {
+  fold_change$metric = fold_change[, metric]
+  
+  plot_list = lapply(gs_oi, FUN = function(gene_set) {
+    # Gene set content
+    gs_content = gene_sets %>%
+      dplyr::filter(gs_name == gene_set) %>%
+      dplyr::pull(ensembl_gene) %>%
+      unique()
+    
+    # Gene set size
+    nb_genes = length(gs_content)
+    
+    # Enrichment metrics
+    NES = gsea_results@result[gene_set, "NES"]
+    p.adjust = gsea_results@result[gene_set, "p.adjust"] %>%
+      round(., 4)
+    qvalues = gsea_results@result[gene_set, "qvalues"]
+    
+    if (p.adjust > 0.05) {
+      p.adjust = paste0("<span style='color:red;'>", p.adjust, "</span>")
+    }
+    
+    my_subtitle = paste0("\nNES : ", round(NES, 2),
+                         " | padj : ", p.adjust,
+                         " | qval : ", round(qvalues, 4),
+                         " | set size : ", nb_genes, " genes")
+    
+    # Size limits
+    lower_FC = min(fold_change[gs_content, ]$metric, na.rm = TRUE)
+    upper_FC = max(fold_change[gs_content, ]$metric, na.rm = TRUE)
+    
+    # Plot
+    p = enrichplot::gseaplot2(x = gsea_results, geneSetID = gene_set) +
+      ggplot2::labs(title = gene_set,
+                    subtitle = my_subtitle) +
+      ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold",
+                                               margin = ggplot2::margin(3, 3, 5, 3)),
+                     plot.subtitle = ggtext::element_markdown(hjust = 0.5,
+                                                              size = 10))
+    
+    wc = ggplot2::ggplot(fold_change[gs_content, ],
+                         aes(label = gene_name, size = abs(metric), color = metric)) +
+      ggwordcloud::geom_text_wordcloud_area(show.legend = TRUE) +
+      ggplot2::scale_color_gradient2(
+        name = metric,
+        low = aquarius::color_cnv[1],
+        mid = "gray70", midpoint = 0,
+        high = aquarius::color_cnv[3]) +
+      ggplot2::scale_size_area(max_size = 7) +
+      ggplot2::theme_minimal() +
+      ggplot2::guides(size = "none")
+    
+    return(list(p, wc))
+  }) %>% unlist(., recursive = FALSE)
+  
+  return(plot_list)
+}
+```
 
 # Visualization
 
@@ -191,25 +253,64 @@ patchwork::wrap_plots(plot_list, ncol = 4) &
   Seurat::NoLegend()
 ```
 
-# Differential expression
+# Analysis
 
-For each cluster, what are the differences between healthy donors (HD) and HS patients (HS) ? We save the results in a list :
+We make a differential expression between each cluster and all others. Then, we compute the differences between HS and HD, all cells considered.
+
+We save the results in a list :
 
 ```{r list_results}
 list_results = list()
 ```
 
+For the differences between HS and HD, we make GSEA using gene sets from MSigDB :
 
-## Clusters 0 and 8
+```{r gene_sets}
+gene_sets = aquarius::get_gene_sets(species = "Homo sapiens")
+gene_sets = gene_sets$gene_sets
 
-We set cluster of interest :
+head(gene_sets)
+```
+
+How many gene sets ?
+
+```{r count_gene_sets}
+gene_sets[, c("gs_subcat", "gs_name")] %>%
+  dplyr::distinct() %>%
+  dplyr::pull(gs_subcat) %>%
+  table() %>%
+  as.data.frame.table() %>%
+  `colnames<-`(c("Category", "Nb gene sets"))
+```
+
+We get gene name and gene ID correspondence :
+
+```{r gene_corresp}
+gene_corresp = sobj@assays[["RNA"]]@meta.features[, c("gene_name", "Ensembl_ID")] %>%
+  `colnames<-`(c("NAME", "ID")) %>%
+  dplyr::mutate(ID = as.character(ID))
+rownames(gene_corresp) = gene_corresp$ID
+
+head(gene_corresp)
+```
+
+## Clusters identity
+
+### Cluster 0
+
+We set the cluster of interest :
 
 ```{r clusters_oi_clust0}
-clusters_oi = c(0,8)
+clusters_oi = 0
 table(sobj$seurat_clusters, sobj$sample_type)[clusters_oi + 1, ]
 ```
 
-### Identity
+We visualize these cells on the projection :
+
+```{r see_clust0, fig.width = 7, fig.height = 7}
+aquarius::plot_red_and_blue(sobj, reduction = name2D,
+                            group1 = clusters_oi)
+```
 
 What is the cluster identity ?
 
@@ -219,7 +320,10 @@ mark = Seurat::FindMarkers(sobj, ident.1 = clusters_oi)
 mark = mark %>%
   dplyr::filter(p_val_adj < 0.05) %>%
   dplyr::filter(avg_logFC > 0) %>%
+  dplyr::filter(abs(pct.1 - pct.2) > 0.2) %>%
   dplyr::arrange(-(pct.1 - pct.2), -avg_logFC)
+
+list_results[[paste0("cluster_", clusters_oi, "_vs_all")]] = mark
 
 dim(mark)
 head(mark, n = 20)
@@ -227,7 +331,7 @@ head(mark, n = 20)
 
 We visualize expression for top 9 genes :
 
-```{r see_clust0, fig.width = 12, fig.height = 12}
+```{r see_clust0_top9, fig.width = 12, fig.height = 12}
 plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene) {
   Seurat::FeaturePlot(sobj, features = one_gene,
                       reduction = name2D) +
@@ -239,107 +343,21 @@ plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene
 patchwork::wrap_plots(plot_list, ncol = 3)
 ```
 
-### HS vs HD
+### Cluster 1
 
-We perform differential expression between HS and HD, within this population :
-
-```{r subset_clust0, fig.width = 5, fig.height = 5}
-subsobj = subset(sobj, seurat_clusters %in% c(clusters_oi))
-Seurat::Idents(subsobj) = subsobj$sample_type
-
-table(subsobj$sample_type)
-```
-
-We identify specific markers for these group :
-
-```{r de_clust0, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(subsobj, ident.1 = "HS", ident.2 = "HD")
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-
-list_results[[paste0("cluster_", paste(clusters_oi, collapse = "_"))]] = mark
-
-dim(mark)
-head(mark, n = 20)
-```
-
-## Cluster 2
-
-We set cluster of interest :
-
-```{r clusters_oi_clust2}
-clusters_oi = 2
-table(sobj$seurat_clusters, sobj$sample_type)[clusters_oi + 1, ]
-```
-
-### Identity
-
-What is the cluster identity ?
-
-```{r ident_clust2, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(sobj, ident.1 = clusters_oi)
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::filter(avg_logFC > 0) %>%
-  dplyr::arrange(-(pct.1 - pct.2), -avg_logFC)
-
-dim(mark)
-head(mark, n = 20)
-```
-
-We visualize expression for top 9 genes :
-
-```{r see_clust2, fig.width = 12, fig.height = 12}
-plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene) {
-  Seurat::FeaturePlot(sobj, features = one_gene,
-                      reduction = name2D) +
-    ggplot2::theme(aspect.ratio = 1) +
-    ggplot2::scale_color_gradientn(colors = aquarius::color_gene) +
-    Seurat::NoAxes()
-})
-
-patchwork::wrap_plots(plot_list, ncol = 3)
-```
-
-### HS vs HD
-
-We perform differential expression between HS and HD, within this population :
-
-```{r subset_clust2, fig.width = 5, fig.height = 5}
-subsobj = subset(sobj, seurat_clusters %in% c(clusters_oi))
-Seurat::Idents(subsobj) = subsobj$sample_type
-
-table(subsobj$sample_type)
-```
-
-We identify specific markers for these group :
-
-```{r de_clust2, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(subsobj, ident.1 = "HS", ident.2 = "HD")
-
-mark = mark %>%
-  dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
-
-list_results[[paste0("cluster_", paste(clusters_oi, collapse = "_"))]] = mark
-
-dim(mark)
-head(mark, n = 20)
-```
-
-## Cluster 1
-
-We set cluster of interest :
+We set the cluster of interest :
 
 ```{r clusters_oi_clust1}
 clusters_oi = 1
 table(sobj$seurat_clusters, sobj$sample_type)[clusters_oi + 1, ]
 ```
 
-### Identity
+We visualize these cells on the projection :
+
+```{r see_clust1, fig.width = 7, fig.height = 7}
+aquarius::plot_red_and_blue(sobj, reduction = name2D,
+                            group1 = clusters_oi)
+```
 
 What is the cluster identity ?
 
@@ -351,13 +369,15 @@ mark = mark %>%
   dplyr::filter(avg_logFC > 0) %>%
   dplyr::arrange(-(pct.1 - pct.2), -avg_logFC)
 
+list_results[[paste0("cluster_", clusters_oi, "_vs_all")]] = mark
+
 dim(mark)
 head(mark, n = 20)
 ```
 
 We visualize expression for top 9 genes :
 
-```{r see_clust1, fig.width = 12, fig.height = 12}
+```{r see_clust1_top9, fig.width = 12, fig.height = 12}
 plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene) {
   Seurat::FeaturePlot(sobj, features = one_gene,
                       reduction = name2D) +
@@ -369,42 +389,68 @@ plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene
 patchwork::wrap_plots(plot_list, ncol = 3)
 ```
 
-### HS vs HD
 
-We perform differential expression between HS and HD, within this population :
+### Cluster 2
 
-```{r subset_clust1, fig.width = 5, fig.height = 5}
-subsobj = subset(sobj, seurat_clusters %in% c(clusters_oi))
-Seurat::Idents(subsobj) = subsobj$sample_type
+We set the cluster of interest :
 
-table(subsobj$sample_type)
+```{r clusters_oi_clust2}
+clusters_oi = 2
+table(sobj$seurat_clusters, sobj$sample_type)[clusters_oi + 1, ]
 ```
 
-We identify specific markers for these group :
+We visualize these cells on the projection :
 
-```{r de_clust1, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(subsobj, ident.1 = "HS", ident.2 = "HD")
+```{r see_clust2, fig.width = 7, fig.height = 7}
+aquarius::plot_red_and_blue(sobj, reduction = name2D,
+                            group1 = clusters_oi)
+```
+
+What is the cluster identity ?
+
+```{r ident_clust2, fig.width = 5, fig.height = 5}
+mark = Seurat::FindMarkers(sobj, ident.1 = clusters_oi)
 
 mark = mark %>%
   dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
+  dplyr::filter(avg_logFC > 0) %>%
+  dplyr::arrange(-(pct.1 - pct.2), -avg_logFC)
 
-list_results[[paste0("cluster_", paste(clusters_oi, collapse = "_"))]] = mark
+list_results[[paste0("cluster_", clusters_oi, "_vs_all")]] = mark
 
 dim(mark)
 head(mark, n = 20)
 ```
 
-## Cluster 3
+We visualize expression for top 9 genes :
 
-We set cluster of interest :
+```{r see_clust2_top9, fig.width = 12, fig.height = 12}
+plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene) {
+  Seurat::FeaturePlot(sobj, features = one_gene,
+                      reduction = name2D) +
+    ggplot2::theme(aspect.ratio = 1) +
+    ggplot2::scale_color_gradientn(colors = aquarius::color_gene) +
+    Seurat::NoAxes()
+})
+
+patchwork::wrap_plots(plot_list, ncol = 3)
+```
+
+### Cluster 3
+
+We set the cluster of interest :
 
 ```{r clusters_oi_clust3}
 clusters_oi = 3
 table(sobj$seurat_clusters, sobj$sample_type)[clusters_oi + 1, ]
 ```
 
-### Identity
+We visualize these cells on the projection :
+
+```{r see_clust3, fig.width = 7, fig.height = 7}
+aquarius::plot_red_and_blue(sobj, reduction = name2D,
+                            group1 = clusters_oi)
+```
 
 What is the cluster identity ?
 
@@ -416,13 +462,15 @@ mark = mark %>%
   dplyr::filter(avg_logFC > 0) %>%
   dplyr::arrange(-(pct.1 - pct.2), -avg_logFC)
 
+list_results[[paste0("cluster_", clusters_oi, "_vs_all")]] = mark
+
 dim(mark)
 head(mark, n = 20)
 ```
 
 We visualize expression for top 9 genes :
 
-```{r see_clust3, fig.width = 12, fig.height = 12}
+```{r see_clust3_top9, fig.width = 12, fig.height = 12}
 plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene) {
   Seurat::FeaturePlot(sobj, features = one_gene,
                       reduction = name2D) +
@@ -434,43 +482,66 @@ plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene
 patchwork::wrap_plots(plot_list, ncol = 3)
 ```
 
-### HS vs HD
+### Cluster 4
 
-We perform differential expression between HS and HD, within this population :
+We set the cluster of interest :
 
-```{r subset_clust3, fig.width = 5, fig.height = 5}
-subsobj = subset(sobj, seurat_clusters %in% c(clusters_oi))
-Seurat::Idents(subsobj) = subsobj$sample_type
-
-table(subsobj$sample_type)
+```{r clusters_oi_clust4}
+clusters_oi = 4
+table(sobj$seurat_clusters, sobj$sample_type)[clusters_oi + 1, ]
 ```
 
-We identify specific markers for these group :
+We visualize these cells on the projection :
 
-```{r de_clust3, fig.width = 5, fig.height = 5}
-mark = Seurat::FindMarkers(subsobj, ident.1 = "HS", ident.2 = "HD")
+```{r see_clust4, fig.width = 7, fig.height = 7}
+aquarius::plot_red_and_blue(sobj, reduction = name2D,
+                            group1 = clusters_oi)
+```
+
+What is the cluster identity ?
+
+```{r ident_clust4, fig.width = 5, fig.height = 5}
+mark = Seurat::FindMarkers(sobj, ident.1 = clusters_oi)
 
 mark = mark %>%
   dplyr::filter(p_val_adj < 0.05) %>%
-  dplyr::arrange(-avg_logFC, pct.1 - pct.2)
+  dplyr::filter(avg_logFC > 0) %>%
+  dplyr::arrange(-(pct.1 - pct.2), -avg_logFC)
 
-list_results[[paste0("cluster_", paste(clusters_oi, collapse = "_"))]] = mark
+list_results[[paste0("cluster_", clusters_oi, "_vs_all")]] = mark
 
 dim(mark)
 head(mark, n = 20)
 ```
 
-## Identity of small clusters
+We visualize expression for top 9 genes :
 
-Small clusters contain not enough cells to compare HD and HS, but we can try to identify specific markers.
+```{r see_clust4_top9, fig.width = 12, fig.height = 12}
+plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene) {
+  Seurat::FeaturePlot(sobj, features = one_gene,
+                      reduction = name2D) +
+    ggplot2::theme(aspect.ratio = 1) +
+    ggplot2::scale_color_gradientn(colors = aquarius::color_gene) +
+    Seurat::NoAxes()
+})
+
+patchwork::wrap_plots(plot_list, ncol = 3)
+```
 
 ### Cluster 5
 
-We set cluster of interest :
+We set the cluster of interest :
 
 ```{r clusters_oi_clust5}
 clusters_oi = 5
 table(sobj$seurat_clusters, sobj$sample_type)[clusters_oi + 1, ]
+```
+
+We visualize these cells on the projection :
+
+```{r see_clust5, fig.width = 7, fig.height = 7}
+aquarius::plot_red_and_blue(sobj, reduction = name2D,
+                            group1 = clusters_oi)
 ```
 
 What is the cluster identity ?
@@ -483,13 +554,15 @@ mark = mark %>%
   dplyr::filter(avg_logFC > 0) %>%
   dplyr::arrange(-(pct.1 - pct.2), -avg_logFC)
 
+list_results[[paste0("cluster_", clusters_oi, "_vs_all")]] = mark
+
 dim(mark)
 head(mark, n = 20)
 ```
 
 We visualize expression for top 9 genes :
 
-```{r see_clust5, fig.width = 12, fig.height = 12}
+```{r see_clust5_top9, fig.width = 12, fig.height = 12}
 plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene) {
   Seurat::FeaturePlot(sobj, features = one_gene,
                       reduction = name2D) +
@@ -503,11 +576,18 @@ patchwork::wrap_plots(plot_list, ncol = 3)
 
 ### Cluster 6
 
-We set cluster of interest :
+We set the cluster of interest :
 
 ```{r clusters_oi_clust6}
 clusters_oi = 6
 table(sobj$seurat_clusters, sobj$sample_type)[clusters_oi + 1, ]
+```
+
+We visualize these cells on the projection :
+
+```{r see_clust6, fig.width = 7, fig.height = 7}
+aquarius::plot_red_and_blue(sobj, reduction = name2D,
+                            group1 = clusters_oi)
 ```
 
 What is the cluster identity ?
@@ -520,13 +600,15 @@ mark = mark %>%
   dplyr::filter(avg_logFC > 0) %>%
   dplyr::arrange(-(pct.1 - pct.2), -avg_logFC)
 
+list_results[[paste0("cluster_", clusters_oi, "_vs_all")]] = mark
+
 dim(mark)
 head(mark, n = 20)
 ```
 
 We visualize expression for top 9 genes :
 
-```{r see_clust6, fig.width = 12, fig.height = 12}
+```{r see_clust6_top9, fig.width = 12, fig.height = 12}
 plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene) {
   Seurat::FeaturePlot(sobj, features = one_gene,
                       reduction = name2D) +
@@ -540,11 +622,18 @@ patchwork::wrap_plots(plot_list, ncol = 3)
 
 ### Cluster 7
 
-We set cluster of interest :
+We set the cluster of interest :
 
 ```{r clusters_oi_clust7}
 clusters_oi = 7
 table(sobj$seurat_clusters, sobj$sample_type)[clusters_oi + 1, ]
+```
+
+We visualize these cells on the projection :
+
+```{r see_clust7, fig.width = 7, fig.height = 7}
+aquarius::plot_red_and_blue(sobj, reduction = name2D,
+                            group1 = clusters_oi)
 ```
 
 What is the cluster identity ?
@@ -557,13 +646,15 @@ mark = mark %>%
   dplyr::filter(avg_logFC > 0) %>%
   dplyr::arrange(-(pct.1 - pct.2), -avg_logFC)
 
+list_results[[paste0("cluster_", clusters_oi, "_vs_all")]] = mark
+
 dim(mark)
 head(mark, n = 20)
 ```
 
 We visualize expression for top 9 genes :
 
-```{r see_clust7, fig.width = 12, fig.height = 12}
+```{r see_clust7_top9, fig.width = 12, fig.height = 12}
 plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene) {
   Seurat::FeaturePlot(sobj, features = one_gene,
                       reduction = name2D) +
@@ -577,11 +668,18 @@ patchwork::wrap_plots(plot_list, ncol = 3)
 
 ### Cluster 8
 
-We set cluster of interest :
+We set the cluster of interest :
 
 ```{r clusters_oi_clust8}
 clusters_oi = 8
 table(sobj$seurat_clusters, sobj$sample_type)[clusters_oi + 1, ]
+```
+
+We visualize these cells on the projection :
+
+```{r see_clust8, fig.width = 7, fig.height = 7}
+aquarius::plot_red_and_blue(sobj, reduction = name2D,
+                            group1 = clusters_oi)
 ```
 
 What is the cluster identity ?
@@ -594,13 +692,15 @@ mark = mark %>%
   dplyr::filter(avg_logFC > 0) %>%
   dplyr::arrange(-(pct.1 - pct.2), -avg_logFC)
 
+list_results[[paste0("cluster_", clusters_oi, "_vs_all")]] = mark
+
 dim(mark)
 head(mark, n = 20)
 ```
 
 We visualize expression for top 9 genes :
 
-```{r see_clust8, fig.width = 12, fig.height = 12}
+```{r see_clust8_top9, fig.width = 12, fig.height = 12}
 plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene) {
   Seurat::FeaturePlot(sobj, features = one_gene,
                       reduction = name2D) +
@@ -612,18 +712,70 @@ plot_list = lapply(rownames(mark)[c(1:9)] %>% na.omit(), FUN = function(one_gene
 patchwork::wrap_plots(plot_list, ncol = 3)
 ```
 
-# Visualisation
 
-We represent differentially expressed genes. First, we extract all DE genes :
+## HS vs HD
+
+We change the cells identity :
+
+```{r change_ident}
+Seurat::Idents(sobj) = sobj$sample_type
+table(Seurat::Idents(sobj))
+```
+
+We compare all cells between HS and HD :
+
+```{r see_hs_hd, fig.width = 7, fig.height = 7}
+aquarius::plot_red_and_blue(sobj, reduction = name2D,
+                            group1 = "HS", group2 = "HD")
+```
+
+### Differential expression
+
+We make a differential expression analysis between cells from HS and cells from HD :
+
+```{r hs_vs_hd_de, fig.width = 5, fig.height = 5}
+mark = Seurat::FindMarkers(sobj, ident.1 = "HS", ident.2 = "HD")
+
+mark = mark %>%
+  dplyr::filter(p_val_adj < 0.05)
+
+list_results[["HS_vs_HD"]] = mark
+```
+
+How many differentially expressed genes by condition ?
+
+```{r nb_genes}
+# Enriched in HS
+mark %>%
+  dplyr::filter(avg_logFC > 0) %>%
+  nrow()
+
+# Enriched in HD
+mark %>%
+  dplyr::filter(avg_logFC < 0) %>%
+  nrow()
+```
+
+There are no significantly enriched genes in HD compared to HS. What are the genes up-regulated in HS ?
+
+```{r enriched_hs}
+genes = mark %>%
+  dplyr::filter(avg_logFC > 0) %>%
+  rownames %>%
+  sort()
+
+genes
+```
+
+### Heatmap
+
+We visualize the expression of these genes on a heatmap.
 
 ```{r prep_genes}
-features_oi = lapply(list_results, FUN = rownames) %>%
-  unlist() %>% unname() %>% unique()
+features_oi = genes
 
 length(features_oi)
 ```
-
-## Heatmap
 
 We prepare the scaled expression matrix :
 
@@ -652,7 +804,7 @@ ha_top = ComplexHeatmap::HeatmapAnnotation(
 And the heatmap :
 
 ```{r heatmap, fig.width = 15, fig.height = 40}
-sobj$cell_group = paste0(sobj$sample_type, sobj$seurat_clusters) %>%
+sobj$cell_group = paste0(sobj$sample_type, "_", sobj$seurat_clusters) %>%
   as.factor()
 
 ht = ComplexHeatmap::Heatmap(mat_expression,
@@ -668,7 +820,7 @@ ht = ComplexHeatmap::Heatmap(mat_expression,
                                                  unit(2, "mm"),
                                                  rep(unit(0.01, "mm"), 8)),
                              column_title = NULL,
-                             cluster_rows = FALSE,
+                             cluster_rows = TRUE,
                              cluster_columns = FALSE,
                              show_column_names = FALSE,
                              # Visual aspect
@@ -681,30 +833,69 @@ ComplexHeatmap::draw(ht,
                      annotation_legend_side = "bottom")
 ```
 
-## Dotplot
+### GSEA
 
-```{r dotplot, fig.width = 15, fig.height = 40}
-features_oi_pos = lapply(list_results, FUN = function(df) {
-  features_pos = df %>% dplyr::filter(avg_logFC > 0) %>%
-    rownames()
-  return(features_pos)
-}) %>% unlist() %>% unname() %>% unique() %>% sort()
+We run a GSEA for all gene sets, from the full count matrix :
 
-features_oi_neg = lapply(list_results, FUN = function(df) {
-  features_neg = df %>% dplyr::filter(avg_logFC < 0) %>%
-    rownames()
-  return(features_neg)
-}) %>% unlist() %>% unname() %>% unique() %>% sort()
+```{r gsea_hs_vs_hd, fig.width = 12, fig.height = 40}
+ranked_gene_list = aquarius::run_foldchange(Seurat::GetAssayData(sobj, assay = "RNA", slot = "counts"),
+                                            group1 = colnames(sobj)[sobj@active.ident %in% "HS"],
+                                            group2 = colnames(sobj)[sobj@active.ident %in% "HD"])
+names(ranked_gene_list) = gene_corresp$ID
 
-Seurat::DotPlot(sobj,
-                assay = "RNA",
-                features = c(features_oi_pos, features_oi_neg),
-                group.by = "sample_type") +
-  ggplot2::coord_flip() +
-  ggplot2::scale_color_gradientn(colors = aquarius::color_gene) +
-  ggplot2::theme(axis.title.x = element_blank(),
-                 axis.title.y = element_blank(),
-                 axis.text.x = element_text(angle = 30, hjust = 1))
+gsea_results = aquarius::gsea_run(ranked_gene_list = ranked_gene_list,
+                                  gene_sets = gene_sets[, c("gs_name", "ensembl_gene")],
+                                  GSEA_p_val_thresh = 1)
+
+list_results[["HS_vs_HD_gsea"]] = gsea_results
+
+gsea_results@result %>%
+  dplyr::filter(pvalue < 0.05) %>%
+  dplyr::top_n(., n = 200, wt = abs(NES)) %>%
+  dplyr::mutate(too_long = ifelse(nchar(ID) > 60, yes = TRUE, no = FALSE)) %>%
+  dplyr::mutate(ID = stringr::str_sub(ID, end = 60)) %>%
+  dplyr::mutate(ID = ifelse(too_long, yes = paste0(ID, "..."), no = ID)) %>%
+  aquarius::gsea_plot(show_legend = TRUE) +
+  ggplot2::labs(title = "GSEA using all genes (count matrix)") +
+  ggplot2::theme(plot.title = element_text(size = 20))
+```
+
+We compute a fold change table to make a wordcloud :
+
+```{r fold_change_ifegs_hs_vs_hd}
+fold_change = gene_corresp
+colnames(fold_change) = c("gene_name", "ID")
+rownames(fold_change) = fold_change$ID
+fold_change$FC = ranked_gene_list[rownames(fold_change)]
+fold_change$pct.1 = Seurat::GetAssayData(sobj, assay = "RNA", slot = "counts")[, sobj@active.ident == "HS"] %>%
+  apply(., MARGIN = 1, FUN = function(one_row) {
+    return( mean(one_row != 0) )
+  })
+fold_change$pct.2 = Seurat::GetAssayData(sobj, assay = "RNA", slot = "counts")[, sobj@active.ident == "HD"] %>%
+  apply(., MARGIN = 1, FUN = function(one_row) {
+    return( mean(one_row != 0) )
+  })
+fold_change$FC_x_pct = ifelse(fold_change$FC > 0,
+                              yes = fold_change$FC * fold_change$pct.1,
+                              no = fold_change$FC * fold_change$pct.2)
+
+dim(fold_change) ; head(fold_change)
+```
+
+We make the gsea plot for some gene sets :
+
+```{r gsea_plot_within_ifegs_hs_vs_hd, fig.width = 12, fig.height = 25}
+gs_oi = c("GOMF_STRUCTURAL_CONSTITUENT_OF_RIBOSOME",
+          "GOBP_B_CELL_CHEMOTAXIS",
+          "GOBP_AUTOCRINE_SIGNALING",
+          "GOBP_COMPLEMENT_ACTIVATION",
+          "GOBP_CORNIFICATION",
+          "WP_HAIR_FOLLICLE_DEVELOPMENT_ORGANOGENESIS_PART_2_OF_3",
+          "PID_INTEGRIN3_PATHWAY")
+
+plot_list = make_gsea_plot(gsea_results, gs_oi, fold_change, "FC_x_pct")
+
+patchwork::wrap_plots(plot_list, ncol = 2, widths = c(2,1.5))
 ```
 
 # Save
