@@ -98,7 +98,7 @@ In this section, we set the global settings of the analysis. We will store data 
 ```{r out_dir}
 save_name = "takahashi"
 out_dir = "."
-n_threads = 5 # for tSNE
+n_threads = 5 # for UMAP
 ```
 
 
@@ -171,10 +171,10 @@ lapply(sobj_list, FUN = dim) %>%
 ```
 
 
-We represent cells in the tSNE :
+We represent cells in the UMAP :
 
 ```{r name2D}
-name2D = "RNA_pca_20_tsne"
+name2D = "RNA_pca_20_umap"
 ```
 
 We look at cell type annotation for each dataset :
@@ -230,33 +230,31 @@ patchwork::wrap_plots(plot_list, ncol = 3)
 
 ## Drop-Seq vs 10X
 
-This dataset gathers 3 samples obtained with Drop-Seq and 2 obtained with 10X. They may not contain the same genes. We compare the gene names between the two 10X datasets :
+This dataset gathers 3 samples obtained with Drop-Seq and 2 obtained with 10X. They may not contain the same genes. We compare the gene identifiers between the two 10X datasets :
 
 ```{r ggvenn_10x, fig.width = 8, fig.height = 8}
-ggvenn::ggvenn(data = list(GSM3717037 = rownames(sobj_list[["GSM3717037"]]),
-                           GSM3717038 = rownames(sobj_list[["GSM3717038"]])),
+ggvenn::ggvenn(data = list(GSM3717037 = sobj_list[["GSM3717037"]]@assays[["RNA"]]@meta.features$Ensembl_ID,
+                           GSM3717038 = sobj_list[["GSM3717038"]]@assays[["RNA"]]@meta.features$Ensembl_ID),
                stroke_size = 0.5, set_name_size = 4) +
-  ggplot2::labs(title = "Gene names between the two 10X datasets") +
+  ggplot2::labs(title = "Gene Ensembl IDs between the two 10X datasets") +
   ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold"))
 ```
 
-The two 10X datasets contain the same gene names. What about with the three Drop-Seq datasets ?
+The two 10X datasets contain the same gene IDs. What about with the three Drop-Seq datasets ?
 
 Note: With the `ggvenn` package, this is not possible to make a Venn diagram with 5 sets.
 
 ```{r ggvenn_ds_10x, fig.width = 8, fig.height = 8}
-ggvenn::ggvenn(data = list(GSM3717034 = rownames(sobj_list[["GSM3717034"]]),
-                           GSM3717035 = rownames(sobj_list[["GSM3717035"]]),
-                           GSM3717036 = rownames(sobj_list[["GSM3717036"]]),
-                           GSM3717037 = rownames(sobj_list[["GSM3717037"]])),
+ggvenn::ggvenn(data = list(GSM3717034 = sobj_list[["GSM3717034"]]@assays[["RNA"]]@meta.features$Ensembl_ID,
+                           GSM3717035 = sobj_list[["GSM3717035"]]@assays[["RNA"]]@meta.features$Ensembl_ID,
+                           GSM3717036 = sobj_list[["GSM3717036"]]@assays[["RNA"]]@meta.features$Ensembl_ID,
+                           GSM3717037 = sobj_list[["GSM3717037"]]@assays[["RNA"]]@meta.features$Ensembl_ID),
                stroke_size = 0.5, set_name_size = 4) +
-  ggplot2::labs(title = "Gene names between the three Drop-Seq datasets and one 10X") +
+  ggplot2::labs(title = "Gene Ensembl IDs between the three Drop-Seq datasets and one 10X") +
   ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold"))
 ```
 
-There are much less genes detected with the Drop-Seq method.
-
-We could set the count to 0 for all the genes detected with 10X but not with Drop-Seq. But, maybe some genes have not the same gene name in the 10X data compared to Drop-Seq data. It will duplicate information. Unfortunately, we do not have the correspondence between gene name and gene ID with this data. We could choose to keep only the genes that are identified in all the five datasets, i.e. the intersection on the Venn diagram :
+There are much less genes detected with the Drop-Seq method. We keep only the genes whose Ensembl IDs are shared between all datasets. When we built individual datasets, we used the same gene annotation. So, genes with the same Ensembl IDs across all datasets have the same names. So, we can work with gene names.
 
 ```{r common_genes}
 common_genes = Reduce(x = lapply(sobj_list, FUN = rownames),
@@ -290,6 +288,146 @@ lapply(sobj_list, FUN = dim) %>%
   `colnames<-`(c("Nb genes", "Nb cells"))
 ```
 
+## Melanocytes remomal
+
+For each individual dataset, we remove melanocytes. First, we smooth cell type annotation at a cluster level :
+
+```{r smooth_annotation}
+sobj_list = lapply(sobj_list, FUN = function(one_sobj) {
+  cluster_type = table(one_sobj$cell_type, one_sobj$seurat_clusters) %>%
+    prop.table(., margin = 2) %>%
+    apply(., 2, which.max)
+  cluster_type = setNames(nm = names(cluster_type),
+                          levels(one_sobj$cell_type)[cluster_type])
+  
+  one_sobj$cluster_type = cluster_type[one_sobj$seurat_clusters]
+  
+  ## Output
+  return(one_sobj)
+})
+```
+
+To locate melanocytes, we look at their score, cell type annotation, and clustering.
+
+```{r plot_cell_type, fig.width = 12, fig.height = 16}
+plot_list = lapply(sobj_list, FUN = function(one_sobj) {
+  project_name = as.character(unique(one_sobj$project_name))
+  plot_sublist = list()
+  
+  # Score
+  plot_sublist[[1]] = Seurat::FeaturePlot(one_sobj, reduction = name2D,
+                                          features = "score_melanocytes") +
+    ggplot2::labs(title = project_name,
+                  subtitle = "Melanocytes score") +
+    Seurat::NoAxes() +
+    ggplot2::scale_color_gradientn(colors = aquarius:::color_gene) +
+    ggplot2::theme(aspect.ratio = 1,
+                   plot.subtitle = element_text(hjust = 0.5))
+  
+  # Cell type
+  plot_sublist[[2]] = Seurat::DimPlot(one_sobj,
+                                      reduction = name2D,
+                                      group.by = "cell_type",
+                                      order = "melanocytes") +
+    ggplot2::scale_color_manual(values = c("purple", rep("gray92", length(color_markers) - 1)),
+                                breaks = c("melanocytes", setdiff(names(color_markers), "melanocytes"))) +
+    ggplot2::labs(title = "Cell type annotation",
+                  subtitle = paste0(sum(one_sobj$cell_type == "melanocytes"),
+                                    " melanocytes")) +
+    Seurat::NoAxes() + Seurat::NoLegend() +
+    ggplot2::theme(aspect.ratio = 1,
+                   plot.title = element_text(hjust = 0.5),
+                   plot.subtitle = element_text(hjust = 0.5))
+  
+  # Clusters
+  plot_sublist[[3]] = Seurat::DimPlot(one_sobj,
+                                      reduction = name2D,
+                                      group.by = "seurat_clusters",
+                                      label = TRUE) +
+    ggplot2::labs(title = "Clusters") +
+    Seurat::NoAxes() + Seurat::NoLegend() +
+    ggplot2::theme(aspect.ratio = 1,
+                   plot.title = element_text(hjust = 0.5),
+                   plot.subtitle = element_text(hjust = 0.5))
+  
+  # Cluster type
+  plot_sublist[[4]] = Seurat::DimPlot(one_sobj,
+                                      reduction = name2D,
+                                      group.by = "cluster_type") +
+    ggplot2::scale_color_manual(values = c("purple", rep("gray92", length(color_markers) - 1)),
+                                breaks = c("melanocytes", setdiff(names(color_markers), "melanocytes"))) +
+    ggplot2::labs(title = "Cluster annotation",
+                  subtitle = paste0(sum(one_sobj$cluster_type == "melanocytes"),
+                                    " melanocytes")) +
+    Seurat::NoAxes() + Seurat::NoLegend() +
+    ggplot2::theme(aspect.ratio = 1,
+                   plot.title = element_text(hjust = 0.5),
+                   plot.subtitle = element_text(hjust = 0.5))
+  
+  return(plot_sublist)
+}) %>% unlist(., recursive = FALSE)
+
+patchwork::wrap_plots(plot_list, ncol = 4)
+```
+
+We remove melanocytes based on cluster annotation for 10X datasets and based on the cell type annotation for Drop-Seq datasets :
+
+```{r remove_melanocytes}
+sobj_list = lapply(sobj_list, FUN = function(one_sobj) {
+  if (one_sobj@project.name %in% c("GSM3717037", "GSM3717038")) {
+    one_sobj$is_of_interest = (one_sobj$cluster_type != "melanocytes")
+  } else {
+    one_sobj$is_of_interest = (one_sobj$cell_type != "melanocytes")
+  }
+  
+  if (sum(one_sobj$is_of_interest) > 0) {
+    one_sobj = subset(one_sobj, is_of_interest == TRUE)
+  } else {
+    one_sobj = NA
+  }
+  
+  one_sobj$is_of_interest = NULL
+  return(one_sobj)
+})
+
+lapply(sobj_list, FUN = dim) %>%
+  do.call(rbind, .) %>%
+  rbind(., colSums(.))
+```
+
+## Re-annotation
+
+We remove melanocytes from annotation :
+
+```{r remove_from_annot}
+cell_markers = cell_markers[names(cell_markers) != "melanocytes"]
+color_markers = color_markers[names(color_markers) != "melanocytes"]
+dotplot_markers = dotplot_markers[names(dotplot_markers) != "melanocytes"]
+```
+
+We re-annotate cells for cell type, since melanocytes have been removed :
+
+```{r re_annot}
+sobj_list = lapply(sobj_list, FUN = function(one_sobj) {
+  # Remove old annotation
+  one_sobj@meta.data[, grep(colnames(one_sobj@meta.data), pattern = "score", value = TRUE)] = NULL
+  
+  # Re-annot
+  one_sobj = aquarius::cell_annot_custom(one_sobj,
+                                         newname = "cell_type",
+                                         markers = cell_markers,
+                                         use_negative = TRUE,
+                                         add_score = FALSE,
+                                         verbose = TRUE)
+  
+  # Set factor levels
+  one_sobj$cell_type = factor(one_sobj$cell_type, levels = names(cell_markers))
+  
+  return(one_sobj)
+})
+```
+
+
 ## Combined dataset
 
 We combine all datasets :
@@ -299,6 +437,14 @@ sobj = base::merge(sobj_list[[1]],
                    y = sobj_list[c(2:length(sobj_list))],
                    add.cell.ids = names(sobj_list))
 sobj
+```
+
+We add again the correspondence between gene names and gene ID. We take the correspondence from one individual 10X dataset.
+
+```{r add_metafeatures}
+sobj@assays$RNA@meta.features = sobj_list[[5]]@assays$RNA@meta.features[, c("Ensembl_ID", "gene_name")]
+
+head(sobj@assays$RNA@meta.features)
 ```
 
 We remove the list of objects :
@@ -324,14 +470,8 @@ sobj$cell_type = factor(sobj$cell_type, levels = names(color_markers))
 summary(sobj@meta.data)
 ```
 
+
 # Processing
-
-We remove cells expressing less than 200 genes, as described in the original publication :
-
-```{r}
-sobj = subset(sobj, nFeature_RNA > 200)
-sobj
-```
 
 We remove genes that are expressed in less than 5 cells :
 
@@ -426,7 +566,7 @@ elbow_p = elbow_p +
 elbow_p
 ```
 
-We generate a tSNE and a UMAP with `r ndims` principal components :
+We generate a UMAP and a UMAP with `r ndims` principal components :
 
 ```{r tsne_umap, time_it = TRUE}
 sobj = Seurat::RunTSNE(sobj,
@@ -446,12 +586,12 @@ sobj = Seurat::RunUMAP(sobj,
 
 We can visualize the two representations :
 
-```{r see_umap_tsne, fig.width = 8, fig.height = 4, class.source = "fold-hide"}
+```{r see_umap_umap, fig.width = 8, fig.height = 4, class.source = "fold-hide"}
 tsne = Seurat::DimPlot(sobj, group.by = "project_name",
-                       reduction = paste0("RNA_pca_", ndims, "_tsne")) +
+                       reduction = paste0("RNA_pca_", ndims, "_umap")) +
   ggplot2::scale_color_manual(values = sample_info$color,
                               breaks = sample_info$project_name) +
-  Seurat::NoAxes() + ggplot2::ggtitle("PCA - tSNE") +
+  Seurat::NoAxes() + ggplot2::ggtitle("PCA - UMAP") +
   ggplot2::theme(aspect.ratio = 1,
                  plot.title = element_text(hjust = 0.5),
                  legend.position = "none")
@@ -491,9 +631,9 @@ sobj = harmony::RunHarmony(object = sobj,
                            project.dim = FALSE)
 ```
 
-From this batch-effect removed projection, we generate a tSNE and a UMAP.
+From this batch-effect removed projection, we generate a UMAP and a UMAP.
 
-```{r harmony_tsne_umap, time_it = TRUE}
+```{r harmony_umap_umap, time_it = TRUE}
 sobj = Seurat::RunUMAP(sobj, 
                        seed.use = 1337L,
                        dims = 1:ndims,
@@ -513,12 +653,12 @@ sobj = Seurat::RunTSNE(sobj,
 
 We visualize the corrected projections :
 
-```{r see_umap_tsne_after, fig.width = 8, fig.height = 4, class.source = "fold-hide"}
+```{r see_umap_umap_after, fig.width = 8, fig.height = 4, class.source = "fold-hide"}
 tsne = Seurat::DimPlot(sobj, group.by = "project_name",
-                       reduction = paste0("harmony_", ndims, "_tsne")) +
+                       reduction = paste0("harmony_", ndims, "_umap")) +
   ggplot2::scale_color_manual(values = sample_info$color,
                               breaks = sample_info$project_name) +
-  Seurat::NoAxes() + ggplot2::ggtitle("PCA - harmony - tSNE") +
+  Seurat::NoAxes() + ggplot2::ggtitle("PCA - harmony - UMAP") +
   ggplot2::theme(aspect.ratio = 1,
                  plot.title = element_text(hjust = 0.5),
                  legend.position = "none")
@@ -604,9 +744,9 @@ patchwork::wrap_plots(plot_list, ncol = 3) &
 We visualize cell type :
 
 ```{r see_cell_type, fig.width = 10, fig.height = 8}
-plot_list = lapply((c(paste0("RNA_pca_", ndims, "_tsne"),
+plot_list = lapply((c(paste0("RNA_pca_", ndims, "_umap"),
                       paste0("RNA_pca_", ndims, "_umap"),
-                      paste0("harmony_", ndims, "_tsne"),
+                      paste0("harmony_", ndims, "_umap"),
                       paste0("harmony_", ndims, "_umap"))),
                    FUN = function(one_red) {
                      Seurat::DimPlot(sobj, group.by = "cell_type",

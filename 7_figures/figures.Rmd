@@ -106,32 +106,6 @@ data_dir = "./.."
 list.files(data_dir)
 ```
 
-
-We load the dataset containing all cells :
-
-```{r load_all_sobj}
-sobj = readRDS(paste0(data_dir, "/3_combined/hs_hd_sobj.rds"))
-sobj
-```
-
-These are all the samples analyzed :
-
-```{r sample_info, class.source = 'fold-hide', fig.width = 8, fig.height = 3}
-sample_info = readRDS(paste0(data_dir, "/1_metadata/hs_hd_sample_info.rds"))
-
-# Nb cells by dataset
-to_plot = table(sobj$sample_identifier) %>%
-  as.data.frame.table(., stringsAsFactors = FALSE) %>%
-  `colnames<-`(c("sample_identifier", "nb_cells")) %>%
-  dplyr::left_join(x = ., y = sample_info, by = "sample_identifier") 
-
-# patchwork
-plot_list = aquarius::fig_plot_gb(to_plot, title = "Available datasets")
-patchwork::wrap_plots(plot_list) +
-  patchwork::plot_layout(design = "A\nB", heights = c(0.1,5)) &
-  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 15))
-```
-
 These are the custom colors for cell populations :
 
 ```{r color_markers, fig.width = 10, fig.height = 1.2, class.source = "fold-hide"}
@@ -155,7 +129,7 @@ data.frame(cell_type = names(color_markers),
 We define custom colors for sample type :
 
 ```{r sample_type_colors, fig.width = 3, fig.height = 0.75, class.source = "fold-hide"}
-sample_type_colors = setNames(nm = levels(sample_info$sample_type),
+sample_type_colors = setNames(nm = c("HS", "HD"),
                               c("#C55F40", "#2C78E6"))
 
 data.frame(cell_type = names(sample_type_colors),
@@ -163,6 +137,44 @@ data.frame(cell_type = names(sample_type_colors),
   ggplot2::ggplot(., aes(x = cell_type, y = 0, fill = cell_type)) +
   ggplot2::geom_point(pch = 21, size = 5) +
   ggplot2::scale_fill_manual(values = unlist(sample_type_colors), breaks = names(sample_type_colors)) +
+  ggplot2::theme_classic() +
+  ggplot2::theme(legend.position = "none",
+                 axis.line = element_blank(),
+                 axis.title = element_blank(),
+                 axis.ticks = element_blank(),
+                 axis.text.y = element_blank())
+```
+
+We define custom colors for laboratory :
+
+```{r laboratory_colors, fig.width = 3, fig.height = 0.75, class.source = "fold-hide"}
+laboratory_colors = setNames(nm = c("our", "Wu", "Takahashi"),
+                             c("firebrick3", "deepskyblue", "mediumpurple"))
+
+data.frame(cell_type = names(laboratory_colors),
+           color = unlist(laboratory_colors)) %>%
+  ggplot2::ggplot(., aes(x = cell_type, y = 0, fill = cell_type)) +
+  ggplot2::geom_point(pch = 21, size = 5) +
+  ggplot2::scale_fill_manual(values = unlist(laboratory_colors), breaks = names(laboratory_colors)) +
+  ggplot2::theme_classic() +
+  ggplot2::theme(legend.position = "none",
+                 axis.line = element_blank(),
+                 axis.title = element_blank(),
+                 axis.ticks = element_blank(),
+                 axis.text.y = element_blank())
+```
+
+We define custom colors for location :
+
+```{r location_colors, fig.width = 3, fig.height = 0.75, class.source = "fold-hide"}
+location_colors = setNames(nm = c("axillary", "hair scalp", "pubis"),
+                           c("forestgreen", "orchid3", "darkorange1"))
+
+data.frame(cell_type = names(location_colors),
+           color = unlist(location_colors)) %>%
+  ggplot2::ggplot(., aes(x = cell_type, y = 0, fill = cell_type)) +
+  ggplot2::geom_point(pch = 21, size = 5) +
+  ggplot2::scale_fill_manual(values = unlist(location_colors), breaks = names(location_colors)) +
   ggplot2::theme_classic() +
   ggplot2::theme(legend.position = "none",
                  axis.line = element_blank(),
@@ -217,27 +229,43 @@ color_fun = function(one_gene) {
 ```
 
 
-# All samples
+# Our dataset
 
-## Settings
+## Atlas
+
+### Settings
+
+We load the dataset containing all cells :
+
+```{r load_all_sobj}
+sobj = readRDS(paste0(data_dir, "/3_combined/hs_hd_sobj.rds"))
+sobj
+```
 
 This is the projection name to visualize cells :
 
 ```{r all_sobj_name2D}
 name2D = "harmony_38_tsne"
-name2D_atlas = name2D
+name2D_our = name2D
 ```
 
-## Preparation
+These are all the samples analyzed :
 
-We make a low resolutive clustering for the heatmap :
+```{r sample_info, class.source = 'fold-hide', fig.width = 12, fig.height = 3}
+sample_info = readRDS(paste0(data_dir, "/1_metadata/hs_hd_sample_info.rds"))
 
-```{r cluster_all}
-sobj = Seurat::FindClusters(sobj, resolution = 0.4)
+# Nb cells by dataset
+to_plot = table(sobj$sample_identifier) %>%
+  as.data.frame.table(., stringsAsFactors = FALSE) %>%
+  `colnames<-`(c("sample_identifier", "nb_cells")) %>%
+  dplyr::left_join(x = ., y = sample_info, by = "sample_identifier") 
 
-length(levels(sobj$seurat_clusters))
+# patchwork
+plot_list = aquarius::fig_plot_gb(to_plot, title = "Available datasets")
+patchwork::wrap_plots(plot_list) +
+  patchwork::plot_layout(design = "A\nB", heights = c(0.1,5)) &
+  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 15))
 ```
-
 
 We define cluster type and cluster category :
 
@@ -255,13 +283,10 @@ cluster_type = setNames(nm = names(cluster_type),
 sobj$cluster_type = cluster_type[sobj$seurat_clusters]
 sobj$cluster_type = factor(sobj$cluster_type,
                            levels = levels(sobj$cell_type))
-sobj$cluster_category = custom_order_cell_type[sobj$cluster_type, "cell_category"]
-sobj$cluster_category = factor(sobj$cluster_category,
-                               levels = names(category_color))
 ```
 
 
-## Figures
+### Figures
 
 Project name :
 
@@ -308,20 +333,24 @@ ggplot2::ggplot(cells_coord, aes(x = Dim1, y = Dim2, col = sample_type)) +
                  legend.position = "none")
 ```
 
-Cluster :
+Location :
 
-```{r fig1_cluster, fig.width = 4, fig.height = 4}
-grey_palette = setNames(nm = levels(sobj$seurat_clusters),
-                        rep("#D9D9D9", length(levels(sobj$seurat_clusters))))
-grey_palette[c("7", "16", "1", "12", "11", "10", "15")] = "#BDBDBD"
-grey_palette[c("16", "14", "5", "9")] = "#969696"
+```{r fig1_location, fig.width = 4, fig.height = 4}
+# Extract coordinates
+cells_coord = sobj@reductions[[name2D]]@cell.embeddings %>%
+  as.data.frame() %>%
+  `colnames<-`(c("Dim1", "Dim2"))
+cells_coord$location = sobj$location
+cells_coord = cells_coord[(rnd_order), ]
 
-Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.4,
-                group.by = "seurat_clusters", cols = grey_palette,
-                label = TRUE, label.size = 6) +
-  ggplot2::theme(aspect.ratio = 1) +
-  Seurat::NoAxes() +
-  Seurat::NoLegend()
+# Plot
+ggplot2::ggplot(cells_coord, aes(x = Dim1, y = Dim2, col = location)) +
+  ggplot2::geom_point(size = 0.5) +
+  ggplot2::scale_color_manual(values = location_colors,
+                              breaks = names(location_colors)) +
+  ggplot2::theme_void() +
+  ggplot2::theme(aspect.ratio = 1,
+                 legend.position = "none")
 ```
 
 Cell type annotation :
@@ -329,24 +358,24 @@ Cell type annotation :
 ```{r fig1_cell_type, fig.width = 4, fig.height = 4}
 Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.5,
                 group.by = "cell_type", cols = color_markers) +
-  ggplot2::theme(aspect.ratio = 1) +
-  Seurat::NoAxes() +
-  Seurat::NoLegend()
+  ggplot2::theme_void() +
+  ggplot2::theme(aspect.ratio = 1,
+                 legend.position = "none")
 ```
 
-Cluster category annotation :
+Cluster type annotation :
 
-```{r fig1_cluster_category, fig.width = 6, fig.height = 6}
+```{r fig1_cluster_type, fig.width = 4, fig.height = 4}
 Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.5,
-                group.by = "cluster_category", cols = category_color) +
-  ggplot2::theme(aspect.ratio = 1) +
-  Seurat::NoAxes() +
-  Seurat::NoLegend()
+                group.by = "cluster_type", cols = color_markers) +
+  ggplot2::theme_void() +
+  ggplot2::theme(aspect.ratio = 1,
+                 legend.position = "none")
 ```
 
 Cell type annotation split by condition :
 
-```{r fig1_cell_type_split, fig.width = 8, fig.height = 5}
+```{r fig1_cell_type_split, fig.width = 8, fig.height = 4.5}
 plot_list = aquarius::plot_split_dimred(sobj, reduction = name2D,
                                         group_by = "cell_type",
                                         group_color = color_markers,
@@ -362,7 +391,7 @@ Gene expression to assess annotation :
 
 ```{r fig1_gene_category, fig.width = 4.5, fig.height = 4}
 genes = c("PTPRC", "MSX2", "KRT14",
-          # For supplementary figure
+          # For supplementary figures
           "VIM", "FGF18", "SOX9", "TCF3", "TBX1",
           "RUNX1", "NFATC1", "LHX2", "CD34", "TCF4")
 
@@ -384,133 +413,6 @@ plot_list = lapply(c(1:length(genes)), FUN = function(gene_id) {
 
 names(plot_list) = genes
 plot_list
-```
-
-Barplot by cluster category :
-
-```{r fig1_barplot_category, fig.width = 3.5, fig.height = 3.5}
-quantif = table(sobj$sample_identifier) %>%
-  as.data.frame.table() %>%
-  `colnames<-`(c("Sample", "nb_cells"))
-
-aquarius::plot_barplot(df = table(sobj$sample_identifier,
-                                  sobj$cluster_category) %>%
-                         as.data.frame.table() %>%
-                         `colnames<-`(c("Sample", "Cell Type", "Number")),
-                       x = "Sample", y = "Number", fill = "Cell Type",
-                       position = position_fill()) +
-  ggplot2::geom_label(data = quantif, inherit.aes = FALSE,
-                      aes(x = .data$Sample, y = 1.05, label = .data$nb_cells),
-                      label.size = 0, size = 4) +
-  ggplot2::scale_fill_manual(values = unlist(category_color),
-                             breaks = names(category_color),
-                             name = "Cell category") +
-  ggplot2::scale_y_continuous(breaks = seq(0, 1, by = 0.25),
-                              labels = paste0(seq(0, 100, by = 25), sep = " %"),
-                              expand = ggplot2::expansion(add = c(0, 0.05))) +
-  ggplot2::theme(axis.title.y = element_blank(),
-                 axis.line.x = element_line(colour = "lightgray"),
-                 text = element_text(size = 15),
-                 axis.text.x = element_text(margin = margin(t = 25, r = 0, b = 0, l = 0)),
-                 legend.position = "none")
-```
-
-Heatmap of cluster proportion by sample :
-
-```{r fig1_heatmap_prop, fig.width = 9, fig.height = 5, class.source = "fold-hide"}
-group_by = "seurat_clusters"
-
-cluster_by_sample = table(sobj$sample_identifier,
-                          sobj@meta.data[, group_by]) %>%
-  prop.table(margin = 1) %>%
-  as.matrix()
-
-## Right annotation : number of cells by dataset
-ht_annot = table(sobj$sample_identifier) %>%
-  as.data.frame.table() %>%
-  `colnames<-`(c("sample_identifier", "nb_cells")) %>%
-  `rownames<-`(.$sample_identifier) %>%
-  dplyr::select(-sample_identifier)
-
-ha_right = ComplexHeatmap::HeatmapAnnotation(
-  df = ht_annot,
-  which = "row",
-  show_legend = TRUE,
-  annotation_name_side = "top",
-  col = list(nb_cells  = circlize::colorRamp2(colors = RColorBrewer::brewer.pal(name = "Greys", n = 9),
-                                              breaks = seq(from = range(ht_annot$nb_cells)[1],
-                                                           to = range(ht_annot$nb_cells)[2],
-                                                           length.out = 9))))
-
-## Left annotation : gender
-ha_left = ComplexHeatmap::HeatmapAnnotation(
-  gender = sample_info$gender,
-  which = "row",
-  show_legend = TRUE,
-  annotation_name_side = "top",
-  col = list(gender = setNames(nm = c("F", "M"),
-                               c("lightcyan3", "navyblue"))))
-
-## Top annotation : main cell type in this cluster
-ht_annot = table(sobj$sample_identifier,
-                 sobj@meta.data[, group_by]) %>%
-  prop.table(margin = 1) %>%
-  as.matrix()
-
-ht_annot = table(sobj$cell_type,
-                 sobj@meta.data[, group_by]) %>%
-  prop.table(., margin = 2) %>%
-  apply(., 2, which.max)
-ht_annot = data.frame(row.names = names(ht_annot),
-                      cell_type = names(color_markers)[ht_annot],
-                      stringsAsFactors = FALSE)
-ht_annot = dplyr::left_join(ht_annot, custom_order_cell_type, by = "cell_type") %>%
-  # Simplification for matrix
-  dplyr::mutate(cell_type = ifelse(cell_type %in% c("medulla", "cortex", "cuticle"), yes = "hair shaft", no = cell_type)) %>%
-  # Simplification for T cells
-  dplyr::mutate(cell_type = ifelse(cell_type %in% c("CD4 T cells", "CD8 T cells"), yes = "T cells", no = cell_type)) %>%
-  # Simplification for APC
-  dplyr::mutate(cell_type = ifelse(cell_type %in% c("Langerhans cells", "macrophages"), yes = "APC", no = cell_type)) %>%
-  # Add color
-  dplyr::mutate(color = as.character(color_markers[cell_type])) %>%
-  dplyr::mutate(color = ifelse(cell_type == "hair shaft", yes = "#FFB6C1", no = color)) %>%
-  dplyr::mutate(color = ifelse(cell_type == "T cells", yes = "#8A6EE6", no = color)) %>%
-  dplyr::mutate(color = ifelse(cell_type == "APC", yes = "#9CAA4B", no = color))
-
-ha_top = ComplexHeatmap::HeatmapAnnotation(
-  # cell_type = ht_annot$cell_type,
-  cell_category = ht_annot$cell_category,
-  which = "column",
-  show_legend = TRUE,
-  show_annotation_name = FALSE,
-  # annotation_name_side = "left",
-  col = list(#cell_type = setNames(nm = ht_annot$cell_type,
-    #                      ht_annot$color),
-    cell_category = category_color
-  ))
-
-## Assemble heatmap
-ht = ComplexHeatmap::Heatmap(cluster_by_sample,
-                             heatmap_legend_param = list(title = "Proportion",
-                                                         col = c("#2166AC", "#F7F7F7", "#B2182B")),
-                             # bottom_annotation = ha_bottom,
-                             right_annotation = ha_right,
-                             left_annotation = ha_left,
-                             top_annotation = ha_top,
-                             cluster_rows = TRUE,
-                             cluster_columns = TRUE,
-                             row_title = "Sample",
-                             row_names_gp = grid::gpar(names = sample_info$sample_identifier,
-                                                       col = sample_info$color,
-                                                       fontface = "bold"),
-                             column_title = "Cluster",
-                             column_names_centered = TRUE,
-                             row_names_side = "left",
-                             column_names_side = "top",
-                             column_names_rot = 0)
-
-## Draw !
-ComplexHeatmap::draw(ht, merge_legends = TRUE)
 ```
 
 For the dotplot, we clarify clusters and cell type annotation :
@@ -556,18 +458,17 @@ plot_list = aquarius::plot_dotplot(sobj,
                                                "CD207", "AIF1",
                                                "TREM2", "MSR1",
                                                "CD79A", "CD79B",
-                                               # "PRDM1", "KRT85",
                                                "MSX2",
                                                "KRT32", "KRT35",
                                                "KRT31", "PRR9",
                                                "BAMBI", "ALDH1A3",
                                                "KRT71", "KRT73",
-                                               "TOP2A", "MCM5",
+                                               "TOP2A", "MCM5", "TK1",
                                                "KRT14", "CXCL14",
                                                "KRT15", "COL17A1",
                                                "DIO2", "TCEAL2",
                                                "KRT16", "KRT6C",
-                                               "SPINK5", "LY6D",
+                                               "SPINK5", "KRT1",
                                                "CLMP", "PPARG"),
                                    assay = "RNA", column_name = "cell_type", nb_hline = 0) +
   ggplot2::scale_color_gradientn(colors = aquarius::color_gene) +
@@ -601,9 +502,1144 @@ plot_list
 ```
 
 
-# Immune cells
+## ORS and IFE basal
 
-## Settings
+### Settings
+
+We load the ORS + IFE basal dataset :
+
+```{r sobj_ors_ifeb}
+sobj_ors_ifeb = readRDS(paste0(data_dir, "/4_zoom/3_zoom_ors_ifeb/ors_ifeb_sobj.rds"))
+sobj_ors_ifeb
+```
+
+
+This is the projection name to visualize cells :
+
+```{r sobj_name2D_ors_ifeb}
+name2D = "harmony_20_tsne"
+```
+
+To represent results from differential expression, we load the analyses results :
+
+```{r list_results_ors_ifeb}
+list_results = readRDS(paste0(data_dir, "/4_zoom/3_zoom_ors_ifeb/ors_ifeb_list_results.rds"))
+
+lapply(list_results, FUN = names)
+```
+
+### Preparation
+
+We defined cluster type :
+
+```{r cluster_type_ors_ifeb, fig.width = 7, fig.height = 5}
+cluster_type = table(sobj_ors_ifeb$cell_type, sobj_ors_ifeb$seurat_clusters) %>%
+  prop.table(., margin = 2) %>%
+  apply(., 2, which.max)
+cluster_type = setNames(nm = names(cluster_type),
+                        levels(sobj_ors_ifeb$cell_type)[cluster_type])
+
+sobj_ors_ifeb$cluster_type = cluster_type[sobj_ors_ifeb$seurat_clusters]
+sobj_ors_ifeb$cluster_type = factor(sobj_ors_ifeb$cluster_type,
+                                    levels = c("ORS", "IFE basal"))
+```
+
+### Figures
+
+ORS + IFE basal on the full atlas :
+
+```{r fig_ors_ifeb_location, fig.width = 2, fig.height = 2}
+sobj$cell_bc = colnames(sobj)
+sobj_ors_ifeb$cell_bc = colnames(sobj_ors_ifeb)
+sobj$is_ors_ifeb = dplyr::left_join(sobj@meta.data[, c("cell_bc", "percent.mt")],
+                                    sobj_ors_ifeb@meta.data[, c("cell_bc", "cluster_type")],
+                                    by = "cell_bc")[, "cluster_type"]
+
+Seurat::DimPlot(sobj, reduction = name2D_our, pt.size = 0.000001,
+                group.by = "is_ors_ifeb", order = "TRUE") +
+  ggplot2::scale_color_manual(values = c(color_markers[c("ORS", "IFE basal")], bg_color),
+                              breaks = c("ORS", "IFE basal", NA), na.value = bg_color) +
+  ggplot2::labs(title = "ORS + IFE basal",
+                subtitle = paste0(ncol(sobj_ors_ifeb), " cells")) +
+  ggplot2::theme(aspect.ratio = 1,
+                 plot.title = element_text(hjust = 0.5, face = "bold"),
+                 plot.subtitle = element_text(hjust = 0.5)) +
+  Seurat::NoAxes() + Seurat::NoLegend()
+```
+
+
+Project name :
+
+```{r fig_ors_ifeb_project_name, fig.width = 4, fig.height = 4}
+# Random order
+set.seed(1234)
+rnd_order = sample(colnames(sobj_ors_ifeb), replace = FALSE, size = ncol(sobj_ors_ifeb))
+
+# Extract coordinates
+cells_coord = sobj_ors_ifeb@reductions[[name2D]]@cell.embeddings %>%
+  as.data.frame() %>%
+  `colnames<-`(c("Dim1", "Dim2"))
+cells_coord$project_name = sobj_ors_ifeb$project_name
+cells_coord = cells_coord[(rnd_order), ]
+
+# Plot
+ggplot2::ggplot(cells_coord, aes(x = Dim1, y = Dim2, col = project_name)) +
+  ggplot2::geom_point(size = 1.2) +
+  ggplot2::scale_color_manual(values = sample_info$color,
+                              breaks = sample_info$project_name) +
+  ggplot2::theme_void() +
+  ggplot2::theme(aspect.ratio = 1,
+                 legend.position = "none")
+```
+
+Cluster :
+
+```{r fig_ors_ifeb_clusters, fig.width = 4, fig.height = 4}
+Seurat::DimPlot(sobj_ors_ifeb, reduction = name2D, pt.size = 1,
+                group.by = "seurat_clusters", cols = grey_palette,
+                label = TRUE, label.size = 8) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() +
+  Seurat::NoLegend()
+```
+
+Cluster type :
+
+```{r fig_ors_ifeb_cluster_type, fig.width = 4, fig.height = 4}
+Seurat::DimPlot(sobj_ors_ifeb, reduction = name2D, pt.size = 1,
+                group.by = "cluster_type", cols = color_markers) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() +
+  Seurat::NoLegend()
+```
+
+DE genes between ORS and IFE basal :
+
+```{r fig_ors_ifeb_de_pop, fig.width = 6, fig.height = 6}
+mark = list_results$ORS_vs_IFE_basal$mark
+mark$gene_name = rownames(mark)
+mark_label = rbind(
+  # up-regulated in ORS
+  mark %>% dplyr::top_n(., n = 20, wt = avg_logFC),
+  # up-regulated in IFE basal
+  mark %>% dplyr::top_n(., n = 20, wt = -avg_logFC),
+  # representative and selective for ORS
+  mark %>% dplyr::top_n(., n = 20, wt = (pct.1 - pct.2)),
+  # representative and selective for IFE basal
+  mark %>% dplyr::top_n(., n = 20, wt = -(pct.1 - pct.2))) %>%
+  dplyr::distinct()
+mark_label = mark_label[!grepl(rownames(mark_label), pattern = "^MT"), ]
+
+avg_logFC_range = setNames(c(min(mark_label$avg_logFC), -1, 0, 1, max(mark_label$avg_logFC)),
+                           nm = c("dodgerblue4", "dodgerblue3", "#B7B7B7", "firebrick3", "firebrick4"))
+
+
+ggplot2::ggplot(mark, aes(x = pct.1, y = pct.2, col = avg_logFC)) +
+  ggplot2::geom_abline(slope = 1, intercept = 0, lty = 2) +
+  ggplot2::geom_point() +
+  ggrepel::geom_label_repel(data = mark_label, max.overlaps = Inf,
+                            aes(x = pct.1, y = pct.2, label = gene_name),
+                            col = "black", fill = NA, size = 3.5, label.size = NA) +
+  ggplot2::labs(x = "Enriched in ORS",
+                y = "Enriched in IFE basal") +
+  ggplot2::scale_color_gradientn(colors = names(avg_logFC_range),
+                                 values = scales::rescale(unname(avg_logFC_range))) +
+  ggplot2::theme_classic() +
+  ggplot2::theme(aspect.ratio = 1)
+```
+
+GSEA plot :
+
+```{r fig_ors_ifeb_keratinization, fig.width = 6, fig.height = 4}
+the_gs_name = "REACTOME_KERATINIZATION" 
+the_content = list_results$ORS_vs_IFE_basal$gsea@result %>%
+  dplyr::filter(ID == the_gs_name)
+the_subtitle = paste0("\nNES : ", round(the_content$NES, 2),
+                      "\t|\tpvalue : ", round(the_content$pvalue, 4),
+                      "\t|\tset size : ", the_content$setSize, " genes")
+
+enrichplot::gseaplot2(x = list_results$ORS_vs_IFE_basal$gsea,
+                      geneSetID = the_gs_name) +
+  ggplot2::labs(title = the_gs_name,
+                subtitle = the_subtitle) +
+  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold",
+                                           margin = ggplot2::margin(3, 3, 5, 3)),
+                 plot.subtitle = ggtext::element_markdown(hjust = 0.5,
+                                                          size = 10))
+```
+
+```{r fig_ors_ifeb_ifna, fig.width = 6, fig.height = 4}
+the_gs_name = "HALLMARK_INTERFERON_GAMMA_RESPONSE" 
+the_content = list_results$ORS_vs_IFE_basal$gsea@result %>%
+  dplyr::filter(ID == the_gs_name)
+the_subtitle = paste0("\nNES : ", round(the_content$NES, 2),
+                      "\t|\tpvalue : ", round(the_content$pvalue, 4),
+                      "\t|\tset size : ", the_content$setSize, " genes")
+
+enrichplot::gseaplot2(x = list_results$ORS_vs_IFE_basal$gsea,
+                      geneSetID = the_gs_name) +
+  ggplot2::labs(title = the_gs_name,
+                subtitle = the_subtitle) +
+  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold",
+                                           margin = ggplot2::margin(3, 3, 5, 3)),
+                 plot.subtitle = ggtext::element_markdown(hjust = 0.5,
+                                                          size = 10))
+```
+
+Score for both gene sets, in all cells :
+
+```{r plot_vln_score, class.source = "fold-hide"}
+significant = function(pval) {
+  signif = case_when(pval > 0.05 ~ "ns",
+                     pval > 0.01 & pval <= 0.05 ~ "*",
+                     pval > 0.001 & pval <= 0.01 ~ "**",
+                     pval <= 0.001 ~ "***")
+  return(signif)
+}
+
+plot_vln_score = function(score_name, the_gs_name) {
+  # t-test between sample type
+  feature_expr = sobj_ors_ifeb@meta.data[, score_name]
+  
+  ## in IFEb
+  feature_hs = feature_expr[sobj_ors_ifeb$sample_type == "HS" & sobj_ors_ifeb$cluster_type == "IFE basal"]
+  feature_hd = feature_expr[sobj_ors_ifeb$sample_type == "HD" & sobj_ors_ifeb$cluster_type == "IFE basal"]
+  feature_hs_VS_feature_hd = stats::t.test(feature_hs, feature_hd)
+  feature_hs_VS_feature_hd
+  pval_ors = feature_hs_VS_feature_hd$p.value
+  
+  ## in ORS
+  feature_hs = feature_expr[sobj_ors_ifeb$sample_type == "HS" & sobj_ors_ifeb$cluster_type == "ORS"]
+  feature_hd = feature_expr[sobj_ors_ifeb$sample_type == "HD" & sobj_ors_ifeb$cluster_type == "ORS"]
+  feature_hs_VS_feature_hd = stats::t.test(feature_hs, feature_hd)
+  feature_hs_VS_feature_hd
+  pval_ibl = feature_hs_VS_feature_hd$p.value
+  
+  # Significance associated with p-value
+  significance_ors = significant(pval_ors)
+  significance_ibl = significant(pval_ibl)
+  
+  # Plot
+  p = Seurat::VlnPlot(sobj_ors_ifeb, features = score_name, pt.size = 0.05,
+                      split.by = "sample_type", group.by = "cluster_type") +
+    ggplot2::scale_fill_manual(values = sample_type_colors,
+                               breaks = names(sample_type_colors)) +
+    # Significance bar (ORS)
+    ggplot2::geom_segment(data = data.frame(1), inherit.aes = FALSE,
+                          size = 0.5,
+                          x = 0.75, xend = 1.25,
+                          y = max(feature_expr)*1.2, yend = max(feature_expr)*1.2) +
+    ggplot2::geom_label(data = data.frame(1), inherit.aes = FALSE,
+                        x = 1, y = max(feature_expr)*1.25,
+                        label = significance_ibl,
+                        fill = NA, label.size = 0) +
+    # Significance bar (IFEb)
+    ggplot2::geom_segment(data = data.frame(1), inherit.aes = FALSE,
+                          size = 0.5,
+                          x = 1.75, xend = 2.25,
+                          y = max(feature_expr)*1.2, yend = max(feature_expr)*1.2) +
+    ggplot2::geom_label(data = data.frame(1), inherit.aes = FALSE,
+                        x = 2, y = max(feature_expr)*1.25,
+                        label = significance_ors,
+                        fill = NA, label.size = 0) +
+    ggplot2::lims(y = c(0, 1.3*max(feature_expr))) +
+    # Style
+    ggplot2::labs(title = the_gs_name) +
+    ggplot2::theme(axis.title.x = element_blank(),
+                   legend.position = "none")
+  
+  return(p)
+}
+```
+
+```{r fig_ors_ifeb_kera_score, fig.width = 6, fig.height = 4}
+gene_sets = aquarius::get_gene_sets(species = "Homo sapiens")
+
+# Genes in the gene set of interest
+the_gs_name = "REACTOME_KERATINIZATION"
+the_gs_content = gene_sets$gene_sets_full %>%
+  dplyr::filter(gs_name == the_gs_name) %>%
+  dplyr::pull(gene_symbol) %>%
+  unlist()
+
+# Attribute a score
+sobj_ors_ifeb$score_kera = Seurat::AddModuleScore(sobj_ors_ifeb,
+                                                  features = list(the_gs_content))$Cluster1
+
+# Violin plot
+plot_vln_score("score_kera", the_gs_name)
+```
+
+```{r fig_ors_ifeb_ifna_score, fig.width = 6, fig.height = 4}
+# Genes in the gene set of interest
+the_gs_name = "HALLMARK_INTERFERON_GAMMA_RESPONSE"
+the_gs_content = gene_sets$gene_sets_full %>%
+  dplyr::filter(gs_name == the_gs_name) %>%
+  dplyr::pull(gene_symbol) %>%
+  unlist()
+
+# Attribute a score
+sobj_ors_ifeb$score_ifng = Seurat::AddModuleScore(sobj_ors_ifeb,
+                                                  features = list(the_gs_content))$Cluster1
+
+# Violin plot
+plot_vln_score("score_ifng", the_gs_name)
+```
+
+
+Violin plot for ORS :
+
+```{r fig_ors_ifeb_ibl, fig.width = 2, fig.height = 3, class.source = "fold-hide"}
+subsobj = subset(sobj_ors_ifeb, cluster_type == "ORS")
+features_oi = c("DUSP1", "DDIT4", "MIF", "LGALS7", "ARF5", "S100A9")
+
+# Plot !
+plot_list = lapply(features_oi, FUN = function(feature) {
+  # t-test between sample type
+  feature_expr = subsobj@assays$RNA@data[feature, ]
+  feature_hs = feature_expr[subsobj$sample_type == "HS"]
+  feature_hd = feature_expr[subsobj$sample_type == "HD"]
+  feature_hs_VS_feature_hd = stats::t.test(feature_hs, feature_hd)
+  feature_hs_VS_feature_hd
+  
+  # Significance associated with p-value
+  pval = feature_hs_VS_feature_hd$p.value
+  
+  significance = case_when(pval > 0.05 ~ "ns",
+                           pval > 0.01 & pval <= 0.05 ~ "*",
+                           pval > 0.001 & pval <= 0.01 ~ "**",
+                           pval <= 0.001 ~ "***")
+  
+  # Plot
+  p = Seurat::VlnPlot(subsobj, group.by = "sample_type", pt.size = 0.3,
+                      features = feature) +
+    ggplot2::scale_fill_manual(values = sample_type_colors,
+                               breaks = names(sample_type_colors)) +
+    # Significance bar
+    ggplot2::geom_segment(data = data.frame(1), inherit.aes = FALSE,
+                          size = 0.5,
+                          x = 1, xend = 2,
+                          y = max(feature_expr)+0.3, yend = max(feature_expr)+0.3) +
+    ggplot2::geom_label(data = data.frame(1), inherit.aes = FALSE,
+                        x = 1.5, y = max(feature_expr)+0.35,
+                        label = significance,
+                        fill = NA, label.size = 0) +
+    ggplot2::lims(y = c(0, max(feature_expr)+0.4)) +
+    # Theme
+    ggplot2::theme(axis.title.x = element_blank(),
+                   legend.position = "none")
+  
+  return(p)
+})
+
+names(plot_list) = features_oi
+plot_list
+```
+
+Violin plot for IFE basal :
+
+```{r fig_ors_ifeb_ors, fig.width = 2, fig.height = 3, class.source = "fold-hide"}
+subsobj = subset(sobj_ors_ifeb, cluster_type == "IFE basal")
+features_oi = c("DUSP1", "KLF6", "CLDN1", "CTGF",
+                "S100A9", "CCL2", "IFITM3", "IFI27")
+
+# Plot !
+plot_list = lapply(features_oi, FUN = function(feature) {
+  # t-test between sample type
+  feature_expr = subsobj@assays$RNA@data[feature, ]
+  feature_hs = feature_expr[subsobj$sample_type == "HS"]
+  feature_hd = feature_expr[subsobj$sample_type == "HD"]
+  feature_hs_VS_feature_hd = stats::t.test(feature_hs, feature_hd)
+  feature_hs_VS_feature_hd
+  
+  # Significance associated with p-value
+  pval = feature_hs_VS_feature_hd$p.value
+  
+  significance = case_when(pval > 0.05 ~ "ns",
+                           pval > 0.01 & pval <= 0.05 ~ "*",
+                           pval > 0.001 & pval <= 0.01 ~ "**",
+                           pval <= 0.001 ~ "***")
+  
+  # Plot
+  p = Seurat::VlnPlot(subsobj, group.by = "sample_type", pt.size = 0.3,
+                      features = feature) +
+    ggplot2::scale_fill_manual(values = sample_type_colors,
+                               breaks = names(sample_type_colors)) +
+    # Significance bar
+    ggplot2::geom_segment(data = data.frame(1), inherit.aes = FALSE,
+                          size = 0.5,
+                          x = 1, xend = 2,
+                          y = max(feature_expr)+0.3, yend = max(feature_expr)+0.3) +
+    ggplot2::geom_label(data = data.frame(1), inherit.aes = FALSE,
+                        x = 1.5, y = max(feature_expr)+0.35,
+                        label = significance,
+                        fill = NA, label.size = 0) +
+    ggplot2::lims(y = c(0, max(feature_expr)+0.4)) +
+    # Theme
+    ggplot2::theme(axis.title.x = element_blank(),
+                   legend.position = "none")
+  
+  return(p)
+})
+
+names(plot_list) = features_oi
+plot_list
+```
+
+Genes of interest :
+
+```{r fig_ors_ifeb_genes, fig.width = 2, fig.height = 2}
+genes = c("KRT16", "COL17A1", "DST", "KRT6B", "IL1R2", "WNT3",
+          "IFI27", "CXCL14", "IGFBP3", "KRT15", "CD200", "IL18")
+
+plot_list = lapply(c(1:length(genes)), FUN = function(gene_id) {
+  gene = genes[[gene_id]]
+  
+  sobj_ors_ifeb$my_gene = Seurat::FetchData(sobj_ors_ifeb, gene)[, 1] %>%
+    aquarius::run_rescale(., new_min = 0, new_max = 10)
+  
+  Seurat::FeaturePlot(sobj_ors_ifeb, features = "my_gene", reduction = name2D, pt.size = 0.25) +
+    ggplot2::scale_color_gradientn(colors = aquarius::color_gene,
+                                   breaks = seq(0, 10, by = 2.5),
+                                   labels = c("min", rep("", 3), "max")) +
+    ggplot2::labs(title = gene) +
+    ggplot2::theme(aspect.ratio = 1,
+                   plot.title = element_text(hjust = 0.5, size = 17),
+                   plot.subtitle = element_text(hjust = 0.5, size = 15),
+                   legend.text = element_text(size = 15),
+                   legend.position = "none") +
+    Seurat::NoAxes()
+})
+
+names(plot_list) = genes
+plot_list
+```
+
+
+## HF-SCs
+
+### Settings
+
+We load the HF-SCs dataset :
+
+```{r sobj_hfsc}
+sobj_hfsc = readRDS(paste0(data_dir, "/4_zoom/2_zoom_hfsc/hfsc_sobj.rds"))
+sobj_hfsc
+```
+
+
+This is the projection name to visualize cells :
+
+```{r sobj_name2D_hfsc}
+name2D = "harmony_24_tsne"
+```
+
+To represent results from differential expression, we load the analyses results :
+
+```{r list_results_hfsc}
+list_results = readRDS(paste0(data_dir, "/4_zoom/2_zoom_hfsc/hfsc_list_results.rds"))
+
+lapply(list_results, FUN = names)
+```
+
+### Figures
+
+HF-SCs on the full atlas :
+
+```{r fig_hfsc_location, fig.width = 2, fig.height = 2}
+sobj$is_hfsc = (colnames(sobj) %in% colnames(sobj_hfsc))
+
+Seurat::DimPlot(sobj, reduction = name2D_our, pt.size = 0.000001,
+                group.by = "is_hfsc", order = "TRUE") +
+  ggplot2::scale_color_manual(values = c(color_markers[["HF-SCs"]], bg_color),
+                              breaks = c(TRUE, FALSE)) +
+  ggplot2::labs(title = "HF-SCss",
+                subtitle = paste0(ncol(sobj_hfsc), " cells")) +
+  ggplot2::theme(aspect.ratio = 1,
+                 plot.title = element_text(hjust = 0.5, face = "bold"),
+                 plot.subtitle = element_text(hjust = 0.5)) +
+  Seurat::NoAxes() + Seurat::NoLegend()
+```
+
+KRT15 expression :
+
+```{r fig_hfsc_krt15, fig.width = 2, fig.height = 2}
+Seurat::FeaturePlot(sobj, reduction = name2D_our, pt.size = 0.000001,
+                    features = "KRT15") +
+  ggplot2::scale_color_gradientn(colors = aquarius::color_gene) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() + Seurat::NoLegend()
+```
+
+Genes of interest :
+
+```{r fig_hfsc_genes, fig.width = 4, fig.height = 4}
+genes = c("TGFB2", "ANGPTL7", "FGF18", "MGP", "EPCAM", "KRT75", "NOTCH3", "PTHLH")
+
+plot_list = lapply(c(1:length(genes)), FUN = function(gene_id) {
+  gene = genes[[gene_id]]
+  
+  sobj_hfsc$my_gene = Seurat::FetchData(sobj_hfsc, gene)[, 1] %>%
+    aquarius::run_rescale(., new_min = 0, new_max = 10)
+  
+  Seurat::FeaturePlot(sobj_hfsc, features = "my_gene", reduction = name2D) +
+    ggplot2::scale_color_gradientn(colors = aquarius::color_gene,
+                                   breaks = seq(0, 10, by = 2.5),
+                                   labels = c("min", rep("", 3), "max")) +
+    ggplot2::labs(title = gene) +
+    ggplot2::theme(aspect.ratio = 1,
+                   plot.title = element_text(hjust = 0.5, size = 17),
+                   plot.subtitle = element_text(hjust = 0.5, size = 15),
+                   legend.text = element_text(size = 15),
+                   legend.position = "none") +
+    Seurat::NoAxes()
+})
+
+plot_list
+```
+
+Project name :
+
+```{r fig_hfsc_project_name, fig.width = 4, fig.height = 4}
+# Random order
+set.seed(1234)
+rnd_order = sample(colnames(sobj_hfsc), replace = FALSE, size = ncol(sobj_hfsc))
+
+# Extract coordinates
+cells_coord = sobj_hfsc@reductions[[name2D]]@cell.embeddings %>%
+  as.data.frame() %>%
+  `colnames<-`(c("Dim1", "Dim2"))
+cells_coord$project_name = sobj_hfsc$project_name
+cells_coord = cells_coord[(rnd_order), ]
+
+# Plot
+ggplot2::ggplot(cells_coord, aes(x = Dim1, y = Dim2, col = project_name)) +
+  ggplot2::geom_point(size = 1.2) +
+  ggplot2::scale_color_manual(values = sample_info$color,
+                              breaks = sample_info$project_name) +
+  ggplot2::theme_void() +
+  ggplot2::theme(aspect.ratio = 1,
+                 legend.position = "none")
+```
+
+Cluster :
+
+```{r fig_hfsc_clusters, fig.width = 4, fig.height = 4}
+Seurat::DimPlot(sobj_hfsc, reduction = name2D, pt.size = 1,
+                group.by = "seurat_clusters", cols = grey_palette,
+                label = TRUE, label.size = 7) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() +
+  Seurat::NoLegend()
+```
+
+
+Heatmap between HS and HD :
+
+```{r fig_hfsc_heatmap, fig.width = 5.5, fig.height = 20, class.source = "fold-hide"}
+features_oi = list_results$HS_vs_HD %>%
+  dplyr::filter(pct.1 > 0.5 | pct.2 > 0.5) %>%
+  dplyr::arrange(-avg_logFC, -pct.1, -pct.2) %>%
+  rownames()
+features_oi = features_oi[!grepl(features_oi, pattern = "^RP")]
+
+# Matrix
+mat_expr = Seurat::GetAssayData(sobj_hfsc)
+mat_expr = mat_expr[features_oi, ]
+mat_expr = Matrix::t(mat_expr)
+mat_expr = cbind(mat_expr, sobj_hfsc$percent.mt)
+colnames(mat_expr)[ncol(mat_expr)] = "percent.rb"
+mat_expr = dynutils::scale_quantile(mat_expr) # between 0 and 1
+mat_expr = Matrix::t(mat_expr)
+dim(mat_expr) # genes x cells
+
+## Colors
+list_colors = list()
+
+# Heatmap
+list_colors[["expression"]] = rev(RColorBrewer::brewer.pal(name = "RdBu", n = 9))
+
+# Sample annotation (top annotation)
+list_colors[["sample_type"]] = sample_type_colors
+list_colors[["sample_identifier"]] = setNames(nm = sample_info$sample_identifier,
+                                              sample_info$color)
+# list_colors[["seurat_clusters"]] = setNames(aquarius::gg_color_hue(length(levels(sobj_hfsc$seurat_clusters))),
+#                                             nm = levels(sobj_hfsc$seurat_clusters))
+# Cells order
+column_order = sobj_hfsc@meta.data %>%
+  dplyr::arrange(sample_type, sample_identifier) %>%
+  rownames()
+column_order = match(column_order, rownames(sobj_hfsc@meta.data))
+
+# Heatmap
+ha_top = HeatmapAnnotation(sample_type = sobj_hfsc$sample_type,
+                           sample_identifier = sobj_hfsc$sample_identifier,
+                           # clusters = sobj_hfsc$seurat_clusters,
+                           col = list(sample_type = list_colors[["sample_type"]],
+                                      sample_identifier = list_colors[["sample_identifier"]]
+                                      # clusters = list_colors[["seurat_clusters"]]
+                           ))
+
+
+# g1 : REACTOME_CYTOKINE_SIGNALING_IN_IMMUNE_SYSTEM
+# g2 : GOBP_APOPTOTIC_PROCESS
+g1_genes = c("B2M", "HLA-C", "HLA-A", "MIF", "PPIA", "JUNB", "IFITM3")
+g2_genes = c("Jun", "ATF3", "BTG2", "RHOB", "NFKBIA", "SGK1", "KLF9",
+             "CAV1", "DDIT4", "PDK4", "TXNIP", "RNF1152", "TLE1")
+ha_right = data.frame(genes =  c(features_oi, "percent.rb"), rownames = c(features_oi, "percent.rb"))
+ha_right$group = case_when(ha_right$genes %in% g1_genes ~ "REACTOME_CYTOKINE_SIGNALING_IN_IMMUNE_SYSTEM",
+                           ha_right$genes %in% g2_genes ~ "GOBP_APOPTOTIC_PROCESS",
+                           TRUE ~ "others")
+
+list_colors[["group"]] = setNames(
+  nm = c("REACTOME_CYTOKINE_SIGNALING_IN_IMMUNE_SYSTEM", "GOBP_APOPTOTIC_PROCESS", "others"),
+  c("red", "black", "gray90"))
+
+ha_right = HeatmapAnnotation(group = ha_right$group,
+                             col = list(group = list_colors[["group"]]),
+                             which = "row",
+                             show_annotation_name = FALSE,
+                             show_legend = TRUE)
+
+# Heatmap
+ht = Heatmap(as.matrix(mat_expr),
+             heatmap_legend_param = list(title = "Expression", at = c(0, 1), 
+                                         labels = c("low", "high")),
+             col = list_colors[["expression"]],
+             top_annotation = ha_top,
+             right_annotation = ha_right,
+             show_column_names = FALSE,
+             column_order = column_order,
+             column_gap = unit(2, "mm"),
+             cluster_rows = FALSE,
+             row_title = NULL,
+             row_names_gp = grid::gpar(fontsize = 10, fontface = "plain"),
+             use_raster = FALSE,
+             show_heatmap_legend = TRUE,
+             border = TRUE)
+
+ComplexHeatmap::draw(ht,
+                     merge_legend = TRUE,
+                     heatmap_legend_side = "bottom",
+                     annotation_legend_side = "bottom")
+```
+
+
+Violin plots split by sample type :
+
+```{r fig_hfsc_vln_sample_type, fig.width = 2, fig.height = 3, class.source = "fold-hide"}
+plot_list = lapply(features_oi, FUN = function(feature) {
+  # t-test between sample type
+  feature_expr = sobj_hfsc@assays$RNA@data[feature, ]
+  feature_hs = feature_expr[sobj_hfsc$sample_type == "HS"]
+  feature_hd = feature_expr[sobj_hfsc$sample_type == "HD"]
+  feature_hs_VS_feature_hd = stats::t.test(feature_hs, feature_hd)
+  feature_hs_VS_feature_hd
+  
+  # Significance associated with p-value
+  pval = feature_hs_VS_feature_hd$p.value
+  
+  significance = case_when(pval > 0.05 ~ "ns",
+                           pval > 0.01 & pval <= 0.05 ~ "*",
+                           pval > 0.001 & pval <= 0.01 ~ "**",
+                           pval <= 0.001 ~ "***")
+  
+  # Plot
+  p = Seurat::VlnPlot(sobj_hfsc, group.by = "sample_type", pt.size = 0.3,
+                      features = feature) +
+    ggplot2::scale_fill_manual(values = sample_type_colors,
+                               breaks = names(sample_type_colors)) +
+    # Significance bar
+    ggplot2::geom_segment(data = data.frame(1), inherit.aes = FALSE,
+                          size = 0.5,
+                          x = 1, xend = 2,
+                          y = max(feature_expr)+0.3, yend = max(feature_expr)+0.3) +
+    ggplot2::geom_label(data = data.frame(1), inherit.aes = FALSE,
+                        x = 1.5, y = max(feature_expr)+0.35,
+                        label = significance,
+                        fill = NA, label.size = 0) +
+    ggplot2::lims(y = c(0, max(feature_expr)+0.4)) +
+    # Theme
+    ggplot2::theme(axis.title.x = element_blank(),
+                   legend.position = "none")
+  
+  return(p)
+})
+
+names(plot_list) = features_oi
+plot_list
+```
+
+
+## Non-matrix cells
+
+### Settings
+
+We load the merged dataset :
+
+```{r sobj_traj}
+sobj_traj = readRDS(paste0(data_dir, "/4_zoom/4_zoom_hfsc_ors_ifeb/non_matrix_sobj_traj_tinga.rds"))
+sobj_traj
+```
+
+
+This is the projection name to visualize cells :
+
+```{r sobj_name2D_traj}
+name2D = "harmony_dm"
+```
+
+We load the trajectory object for visualisation purpose :
+
+```{r load_traj}
+my_traj = readRDS(paste0(data_dir, "/4_zoom/4_zoom_hfsc_ors_ifeb/non_matrix_my_traj_tinga.rds"))
+class(my_traj)
+```
+
+
+### Preparation
+
+We defined cell type based on individual object :
+
+```{r cluster_type_traj, fig.width = 7, fig.height = 5}
+sobj_ors_ifeb$cell_bc = colnames(sobj_ors_ifeb)
+sobj_traj$cell_bc = colnames(sobj_traj)
+sobj_traj$cluster_type = dplyr::left_join(sobj_traj@meta.data[, c("cell_bc", "percent.mt")],
+                                          sobj_ors_ifeb@meta.data[, c("cell_bc", "cluster_type")],
+                                          by = "cell_bc")[, "cluster_type"] %>% as.character()
+sobj_traj$cluster_type = ifelse(colnames(sobj_traj) %in% colnames(sobj_hfsc),
+                                yes = "HF-SCs",
+                                no = sobj_traj$cluster_type) %>%
+  as.factor()
+```
+
+### Figures
+
+Cells on the full atlas :
+
+```{r fig_traj_location, fig.width = 2, fig.height = 2}
+sobj$cell_bc = colnames(sobj)
+sobj_traj$cell_bc = colnames(sobj_traj)
+sobj$is_traj = dplyr::left_join(sobj@meta.data[, c("cell_bc", "percent.mt")],
+                                sobj_traj@meta.data[, c("cell_bc", "cluster_type")],
+                                by = "cell_bc")[, "cluster_type"]
+
+Seurat::DimPlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
+                group.by = "is_traj", order = levels(sobj_traj$cluster_type)) +
+  ggplot2::scale_color_manual(values = c(color_markers[c("ORS", "IFE basal", "HF-SCs")], bg_color),
+                              breaks = c("ORS", "IFE basal", "HF-SCs", NA), na.value = bg_color) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() + Seurat::NoLegend()
+```
+
+
+Project name :
+
+```{r fig_traj_project_name, fig.width = 4, fig.height = 4}
+# Random order
+set.seed(1234)
+rnd_order = sample(colnames(sobj_traj), replace = FALSE, size = ncol(sobj_traj))
+
+# Extract coordinates
+cells_coord = sobj_traj@reductions[[name2D]]@cell.embeddings %>%
+  as.data.frame() %>%
+  `colnames<-`(c("Dim1", "Dim2"))
+cells_coord$sample_type = sobj_traj$sample_type
+cells_coord = cells_coord[order(sobj_traj$sample_type), ]
+
+# Plot
+ggplot2::ggplot(cells_coord, aes(x = Dim1, y = Dim2, col = sample_type)) +
+  ggplot2::geom_point(size = 1.2) +
+  ggplot2::scale_color_manual(values = sample_type_colors,
+                              breaks = names(sample_type_colors)) +
+  ggplot2::theme_void() +
+  ggplot2::theme(aspect.ratio = 1,
+                 legend.position = "none")
+```
+
+
+Cluster type :
+
+```{r fig_traj_cluster_type, fig.width = 3, fig.height = 3}
+Seurat::DimPlot(sobj_traj, reduction = name2D, pt.size = 0.5,
+                group.by = "cluster_type", cols = color_markers) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() +
+  Seurat::NoLegend()
+```
+
+Pseudotime :
+
+```{r fig_traj_pseudotime, fig.width = 6, fig.height = 4}
+Seurat::FeaturePlot(sobj_traj, reduction = name2D, pt.size = 0.5,
+                    features = "pseudotime") +
+  ggplot2::scale_color_gradientn(colors = viridis::viridis(n = 100)) +
+  ggplot2::lims(x = range(sobj_traj@reductions[[name2D]]@cell.embeddings[, 1]),
+                y = range(sobj_traj@reductions[[name2D]]@cell.embeddings[, 2])) +
+  ggplot2::theme(aspect.ratio = 1,
+                 plot.title = element_blank()) +
+  Seurat::NoAxes()
+```
+
+Pseudotime with dynplot's function :
+
+```{r fig_traj_pseudotime_dynplot, fig.width = 5, fig.height = 5}
+dynplot::plot_dimred(trajectory = my_traj,
+                     dimred = sobj_traj[[name2D]]@cell.embeddings,
+                     # Cells
+                     color_cells = 'pseudotime',
+                     size_cells = 1.6,
+                     border_radius_percentage = 0,
+                     # Trajectory
+                     plot_trajectory = TRUE,
+                     color_trajectory = "none",
+                     label_milestones = FALSE,
+                     size_milestones = 0,
+                     size_transitions = 1)
+```
+
+Violin plots for HF-SCs markers :
+
+```{r fig_traj_vln, fig.width = 2.5, fig.height = 4}
+features_oi = c("SOX9", "TCF4", "TBX1", "NFATC1", 
+                "LHX2", "RUNX1", "VIM", "TCF3", "FGF18", "CD34",
+                # HF-SCs + IFE basal
+                "COL17A1", "MT2A", "TXNIP", "CAVIN1",
+                # HF-SCs + ORS
+                "TUBB2A", "KRT6B", "MARCKSL1", "ID4", "CYP1B1", "BARX2",
+                # HF-SCs
+                "LMCD1", "TCEAL2", "FRZB", "THBS1", "DIO2")
+
+plot_list = lapply(features_oi, FUN = function(one_gene) {
+  p = Seurat::VlnPlot(sobj_traj, group.by = "cluster_type",
+                      features = one_gene, pt.size = 0.001) +
+    ggplot2::scale_fill_manual(values = color_markers[levels(sobj_traj$cluster_type)],
+                               breaks = levels(sobj_traj$cluster_type)) +
+    ggplot2::theme(plot.subtitle = element_text(hjust = 0.5),
+                   axis.title.x = element_blank(),
+                   legend.position = "none")
+  return(p)
+})
+
+names(plot_list) = features_oi
+plot_list
+```
+
+Same split by sample type :
+
+```{r fig_traj_vln_split, fig.width = 5, fig.height = 4}
+plot_list = lapply(features_oi, FUN = function(one_gene) {
+  p = Seurat::VlnPlot(sobj_traj, group.by = "cluster_type", split.by = "sample_type",
+                      features = one_gene, pt.size = 0.001) +
+    ggplot2::scale_fill_manual(values = sample_type_colors,
+                               breaks = names(sample_type_colors)) +
+    ggplot2::theme(plot.subtitle = element_text(hjust = 0.5),
+                   axis.title.x = element_blank(),
+                   legend.position = "none")
+  return(p)
+})
+
+names(plot_list) = features_oi
+plot_list
+```
+
+On the diffusion map :
+
+```{r fig_traj_feature, fig.width = 5, fig.height = 5}
+axis_lims = apply(sobj_traj@reductions[["harmony_dm"]]@cell.embeddings[, c(1:2)], 2, range)
+
+plot_list = lapply(features_oi, FUN = function(one_gene) {
+  p = Seurat::FeaturePlot(sobj_traj, features = one_gene, reduction = "harmony_dm") +
+    ggplot2::scale_color_gradientn(colors = aquarius::color_gene,
+                                   breaks = c(0:10)) +
+    ggplot2::lims(x = axis_lims[, 1],
+                  y = axis_lims[, 2]) +
+    ggplot2::theme(aspect.ratio = 1) +
+    Seurat::NoAxes()
+  
+  return(p)
+})
+
+names(plot_list) = features_oi
+plot_list
+```
+
+Heatmap :
+
+```{r fig_traj_heatmap, fig.width = 10, fig.height = 10, class.source = "fold-hide"}
+# Matrix
+mat_expr = Seurat::GetAssayData(sobj_traj)
+mat_expr = mat_expr[features_oi, ]
+mat_expr = Matrix::t(mat_expr)
+mat_expr = dynutils::scale_quantile(mat_expr) # between 0 and 1
+mat_expr = Matrix::t(mat_expr)
+dim(mat_expr) # genes x cells
+
+## Colors
+list_colors = list()
+
+# Heatmap
+list_colors[["expression"]] = rev(RColorBrewer::brewer.pal(name = "RdBu", n = 9))
+
+# Sample annotation (top annotation)
+list_colors[["sample_type"]] = sample_type_colors
+list_colors[["cluster_type"]] = setNames(nm = levels(sobj_traj$cluster_type),
+                                         color_markers[levels(sobj_traj$cluster_type)])
+list_colors[["pseudotime"]] = circlize::colorRamp2(breaks = seq(min(sobj_traj$pseudotime, na.rm = TRUE),
+                                                                max(sobj_traj$pseudotime, na.rm = TRUE),
+                                                                length.out = 9),
+                                                   colors = viridis::viridis(9))
+
+# Cells order
+column_order = sobj_traj@meta.data %>%
+  dplyr::arrange(cluster_type, pseudotime) %>%
+  rownames()
+column_order = match(column_order, rownames(sobj_traj@meta.data))
+
+# Heatmap
+ha_top = HeatmapAnnotation(cluster_type = sobj_traj$cluster_type,
+                           pseudotime = sobj_traj$pseudotime,
+                           sample_type = sobj_traj$sample_type,
+                           col = list(sample_type = list_colors[["sample_type"]],
+                                      cluster_type = list_colors[["cluster_type"]],
+                                      pseudotime = list_colors[["pseudotime"]]))
+
+# Heatmap
+ht = Heatmap(as.matrix(mat_expr),
+             heatmap_legend_param = list(title = "Expression", at = c(0, 1), 
+                                         labels = c("low", "high")),
+             col = list_colors[["expression"]],
+             top_annotation = ha_top,
+             show_column_names = FALSE,
+             column_order = column_order,
+             column_gap = unit(2, "mm"),
+             column_split = sobj_traj$cluster_type,
+             cluster_rows = FALSE,
+             row_title = NULL,
+             row_names_gp = grid::gpar(fontsize = 14, fontface = "plain"),
+             use_raster = FALSE,
+             show_heatmap_legend = TRUE,
+             border = TRUE)
+
+ComplexHeatmap::draw(ht,
+                     merge_legend = TRUE,
+                     heatmap_legend_side = "bottom",
+                     annotation_legend_side = "bottom")
+```
+
+
+
+## Matrix cells
+
+### Settings
+
+We load the immune cells dataset :
+
+```{r sobj_mat}
+sobj_mat = readRDS(paste0(data_dir, "/4_zoom/5_zoom_matrix/matrix_sobj.rds"))
+sobj_mat
+```
+
+
+This is the projection name to visualize cells :
+
+```{r sobj_name2D_mat}
+name2D = "harmony_19_tsne"
+```
+
+To represent results from differential expression, we load the analyses results :
+
+```{r list_results_mat}
+list_results = readRDS(paste0(data_dir, "/4_zoom/5_zoom_matrix/matrix_list_results.rds"))
+
+lapply(list_results, FUN = names)
+```
+
+### Preparation
+
+We defined factor levels for cluster type :
+
+```{r sobj_mat_cluster_type}
+sobj_mat$cluster_type = factor(sobj_mat$cluster_type,
+                               levels = c("medulla", "cortex", "IRS", "cuticle"))
+
+table(sobj_mat$cluster_type, sobj_mat$sample_identifier)
+```
+
+
+### Figures
+
+Matrix cells on the full atlas :
+
+```{r fig_mat_location, fig.width = 2, fig.height = 2}
+sobj$is_matrix = (colnames(sobj) %in% colnames(sobj_mat))
+
+Seurat::DimPlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
+                group.by = "is_matrix", order = "TRUE") +
+  ggplot2::scale_color_manual(values = c(category_color[["matrix"]], bg_color),
+                              breaks = c(TRUE, FALSE)) +
+  ggplot2::labs(title = "Matrix cells",
+                subtitle = paste0(ncol(sobj_mat), " cells")) +
+  ggplot2::theme(aspect.ratio = 1,
+                 plot.title = element_text(hjust = 0.5, face = "bold"),
+                 plot.subtitle = element_text(hjust = 0.5)) +
+  Seurat::NoAxes() + Seurat::NoLegend()
+```
+
+Cluster type :
+
+```{r fig_mat_cluster_type, fig.width = 4, fig.height = 4}
+Seurat::DimPlot(sobj_mat, reduction = name2D, pt.size = 1,
+                group.by = "cluster_type", cols = color_markers) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() +
+  Seurat::NoLegend()
+```
+
+Clustering :
+
+```{r fig_mat_clustering, fig.width = 4, fig.height = 4}
+Seurat::DimPlot(sobj_mat, reduction = name2D, pt.size = 1,
+                group.by = "seurat_clusters", label = TRUE) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() +
+  Seurat::NoLegend()
+```
+
+Barplot with proportion :
+
+```{r fig_mat_barplot_category, fig.width = 10, fig.height = 3.5}
+quantif_total = table(sobj$sample_identifier) %>%
+  as.data.frame.table() %>%
+  `colnames<-`(c("Sample", "nb_cells"))
+
+# Number of matrix cells
+quantif_immune = table(sobj_mat$sample_identifier, sobj_mat$cluster_type) %>%
+  as.data.frame.table() %>%
+  `colnames<-`(c("Sample", "CellType", "Number")) %>%
+  # proportion for the whole dataset
+  dplyr::left_join(., quantif_total, by = "Sample") %>%
+  dplyr::mutate(prop_cells = 100*round(Number/nb_cells,4)) %>%
+  `colnames<-`(c("Sample", "CellType", "Number", "Total", "Proportion"))
+
+ggplot2::ggplot(data = quantif_immune,
+                aes(x = Sample, y = Proportion, fill = CellType)) +
+  ggplot2::geom_bar(stat = "identity", position = position_dodge(width = 0.7),
+                    color = "black", size = 0.25, width = 0.7) +
+  ggplot2::scale_fill_manual(values = unlist(color_markers[levels(sobj_mat$cluster_type)]),
+                             breaks = names(color_markers[levels(sobj_mat$cluster_type)]),
+                             name = "Cell Type") +
+  # Theme
+  ggplot2::scale_y_continuous(limits = c(0, max(quantif_immune$Proportion)),
+                              expand = ggplot2::expansion(add = c(0, 1))) +
+  ggplot2::labs(y = "% of matrix cells by sample") +
+  ggplot2::theme_classic() +
+  ggplot2::theme(axis.title.x = element_blank(),
+                 axis.line.x = element_line(colour = "lightgray"),
+                 text = element_text(size = 15),
+                 axis.text.x = element_text(angle = 0, hjust = 0.5),
+                 panel.grid.major.y = element_line(color = "lightgray", size = 0.5),
+                 panel.grid.minor.y = element_line(color = "lightgray", size = 0.5))
+```
+
+GSEA plots :
+
+```{r fig_mat_gsea_1, fig.width = 6, fig.height = 4}
+the_gs_name = "GOCC_KERATIN_FILAMENT" 
+the_content = list_results$cortex$gsea@result %>%
+  dplyr::filter(ID == the_gs_name)
+the_subtitle = paste0("\nNES : ", round(the_content$NES, 2),
+                      "\t|\tpvalue : ", round(the_content$pvalue, 4),
+                      "\t|\tset size : ", the_content$setSize, " genes")
+
+enrichplot::gseaplot2(x = list_results$cortex$gsea,
+                      geneSetID = the_gs_name) +
+  ggplot2::labs(title = the_gs_name,
+                subtitle = the_subtitle) +
+  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold",
+                                           margin = ggplot2::margin(3, 3, 5, 3)),
+                 plot.subtitle = ggtext::element_markdown(hjust = 0.5,
+                                                          size = 10))
+```
+
+```{r fig_mat_gsea_2, fig.width = 6, fig.height = 4}
+the_gs_name = "GOBP_INTERMEDIATE_FILAMENT_ORGANIZATION" 
+the_content = list_results$cortex$gsea@result %>%
+  dplyr::filter(ID == the_gs_name)
+the_subtitle = paste0("\nNES : ", round(the_content$NES, 2),
+                      "\t|\tpvalue : ", round(the_content$pvalue, 4),
+                      "\t|\tset size : ", the_content$setSize, " genes")
+
+enrichplot::gseaplot2(x = list_results$cortex$gsea,
+                      geneSetID = the_gs_name) +
+  ggplot2::labs(title = the_gs_name,
+                subtitle = the_subtitle) +
+  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold",
+                                           margin = ggplot2::margin(3, 3, 5, 3)),
+                 plot.subtitle = ggtext::element_markdown(hjust = 0.5,
+                                                          size = 10))
+```
+
+Violin plot
+
+```{r fig_mat_vln_split, fig.width = 6, fig.height = 4, class.source = "fold-hide"}
+features_oi = c("KRT32")
+
+plot_list = lapply(features_oi, FUN = function(feature) {
+  feature_expr = Seurat::FetchData(sobj_mat, feature)[, 1]
+  y_max = max(feature_expr)*1.1
+  
+  # Dataframe stat
+  pop_oi = levels(sobj_mat$cluster_type)
+  
+  df_stat = lapply(c(1:length(pop_oi)), FUN = function(i) {
+    pop = pop_oi[i]
+    
+    # Stat
+    feature_hs = feature_expr[sobj_mat$sample_type == "HS" & sobj_mat$cluster_type == pop]
+    feature_hd = feature_expr[sobj_mat$sample_type == "HD" & sobj_mat$cluster_type == pop]
+    feature_hs_vs_hd = stats::t.test(feature_hs, feature_hd)
+    significance = significant(feature_hs_vs_hd$p.value)
+    
+    # Output (x, pop, signif)
+    row_i = c(i, pop, significance)
+    
+    return(row_i)
+  }) %>% do.call(rbind.data.frame, .) %>%
+    `colnames<-`(c("x", "pop", "signif")) %>%
+    dplyr::mutate(x = as.numeric(x))
+  
+  # Plot
+  p = Seurat::VlnPlot(sobj_mat, features = feature,
+                      group.by = "cluster_type",
+                      split.by = "sample_type") +
+    ggplot2::scale_fill_manual(values = sample_type_colors,
+                               breaks = names(sample_type_colors)) +
+    # Stat
+    ggplot2::geom_segment(data = df_stat, inherit.aes = FALSE, size = 0.5,
+                          mapping = aes(x = x - 0.25, xend = x + 0.25),
+                          y = y_max, yend = y_max) +
+    ggplot2::geom_label(data = df_stat, inherit.aes = FALSE,
+                        mapping = aes(x = pop, label = signif),
+                        y = y_max*1.05,
+                        fill = NA, label.size = 0) +
+    # Theme
+    ggplot2::lims(y = c(0, y_max*1.1)) +
+    ggplot2::theme(axis.title.x = element_blank(),
+                   legend.position = "right")
+  
+  return(p)
+})
+
+names(plot_list) = features_oi
+plot_list
+```
+
+
+
+## Immune cells
+
+### Settings
 
 We load the immune cells dataset :
 
@@ -628,7 +1664,7 @@ lapply(list_results, FUN = names)
 ```
 
 
-## Preparation
+### Preparation
 
 We defined cluster type and cluster category :
 
@@ -645,7 +1681,7 @@ sobj_ic$cluster_type = factor(sobj_ic$cluster_type,
 ```
 
 
-## Figures
+### Figures
 
 Immune cells on the full atlas :
 
@@ -867,14 +1903,14 @@ ggplot2::ggplot(data = quantif_immune %>% dplyr::filter(isCytotoxic != "cytotoxi
   #                             color = "black", size = 0.25,
   #                             width = 0.37/3,
   #                             pattern_color = "black", # bar border
-#                             show.legend = TRUE) +
-# ggpattern::scale_pattern_manual(name = "CD8 T cells", values =  "stripe") +
-# ggpattern::scale_pattern_angle_manual(name = "CD8 T cells", values = 50) +
-# ggplot2::guides(pattern = ggplot2::guide_legend(override.aes = list(fill = "white")),
-#                 fill = ggplot2::guide_legend(override.aes = list(pattern = "none"))) +
-# Theme
-ggplot2::scale_y_continuous(limits = c(0, max(quantif_immune$Proportion)),
-                            expand = ggplot2::expansion(add = c(0, 1))) +
+  #                             show.legend = TRUE) +
+  # ggpattern::scale_pattern_manual(name = "CD8 T cells", values =  "stripe") +
+  # ggpattern::scale_pattern_angle_manual(name = "CD8 T cells", values = 50) +
+  # ggplot2::guides(pattern = ggplot2::guide_legend(override.aes = list(fill = "white")),
+  #                 fill = ggplot2::guide_legend(override.aes = list(pattern = "none"))) +
+  # Theme
+  ggplot2::scale_y_continuous(limits = c(0, max(quantif_immune$Proportion)),
+                              expand = ggplot2::expansion(add = c(0, 1))) +
   ggplot2::labs(y = "% of immune cells by sample") +
   ggplot2::theme_classic() +
   ggplot2::theme(axis.title.x = element_blank(),
@@ -1003,1500 +2039,16 @@ ComplexHeatmap::draw(ht,
 ```
 
 
-# HF-SCs
 
-## Settings
 
-We load the HF-SCss dataset :
 
-```{r sobj_hfsc}
-sobj_hfsc = readRDS(paste0(data_dir, "/4_zoom/2_zoom_hfsc/hfsc_sobj.rds"))
-sobj_hfsc
-```
 
-
-This is the projection name to visualize cells :
-
-```{r sobj_name2D_hfsc}
-name2D = "harmony_24_tsne"
-```
-
-To represent results from differential expression, we load the analyses results :
-
-```{r list_results_hfsc}
-list_results = readRDS(paste0(data_dir, "/4_zoom/2_zoom_hfsc/hfsc_list_results.rds"))
-
-lapply(list_results, FUN = names)
-```
-
-## Figures
-
-HF-SCss on the full atlas :
-
-```{r fig_hfsc_location, fig.width = 2, fig.height = 2}
-sobj$is_hfsc = (colnames(sobj) %in% colnames(sobj_hfsc))
-
-Seurat::DimPlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
-                group.by = "is_hfsc", order = "TRUE") +
-  ggplot2::scale_color_manual(values = c(color_markers[["HF-SCs"]], bg_color),
-                              breaks = c(TRUE, FALSE)) +
-  ggplot2::labs(title = "HF-SCss",
-                subtitle = paste0(ncol(sobj_hfsc), " cells")) +
-  ggplot2::theme(aspect.ratio = 1,
-                 plot.title = element_text(hjust = 0.5, face = "bold"),
-                 plot.subtitle = element_text(hjust = 0.5)) +
-  Seurat::NoAxes() + Seurat::NoLegend()
-```
-
-KRT15 expression :
-
-```{r fig_hfsc_krt15, fig.width = 2, fig.height = 2}
-Seurat::FeaturePlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
-                    features = "KRT15") +
-  ggplot2::scale_color_gradientn(colors = aquarius::color_gene) +
-  ggplot2::theme(aspect.ratio = 1) +
-  Seurat::NoAxes() + Seurat::NoLegend()
-```
-
-Genes of interest :
-
-```{r fig_hfsc_genes, fig.width = 4, fig.height = 4}
-genes = c("TGFB2", "ANGPTL7", "FGF18", "MGP", "EPCAM", "KRT75", "NOTCH3", "PTHLH")
-
-plot_list = lapply(c(1:length(genes)), FUN = function(gene_id) {
-  gene = genes[[gene_id]]
-  
-  sobj_hfsc$my_gene = Seurat::FetchData(sobj_hfsc, gene)[, 1] %>%
-    aquarius::run_rescale(., new_min = 0, new_max = 10)
-  
-  Seurat::FeaturePlot(sobj_hfsc, features = "my_gene", reduction = name2D) +
-    ggplot2::scale_color_gradientn(colors = aquarius::color_gene,
-                                   breaks = seq(0, 10, by = 2.5),
-                                   labels = c("min", rep("", 3), "max")) +
-    ggplot2::labs(title = gene) +
-    ggplot2::theme(aspect.ratio = 1,
-                   plot.title = element_text(hjust = 0.5, size = 17),
-                   plot.subtitle = element_text(hjust = 0.5, size = 15),
-                   legend.text = element_text(size = 15),
-                   legend.position = "none") +
-    Seurat::NoAxes()
-})
-
-plot_list
-```
-
-Project name :
-
-```{r fig_hfsc_project_name, fig.width = 4, fig.height = 4}
-# Random order
-set.seed(1234)
-rnd_order = sample(colnames(sobj_hfsc), replace = FALSE, size = ncol(sobj_hfsc))
-
-# Extract coordinates
-cells_coord = sobj_hfsc@reductions[[name2D]]@cell.embeddings %>%
-  as.data.frame() %>%
-  `colnames<-`(c("Dim1", "Dim2"))
-cells_coord$project_name = sobj_hfsc$project_name
-cells_coord = cells_coord[(rnd_order), ]
-
-# Plot
-ggplot2::ggplot(cells_coord, aes(x = Dim1, y = Dim2, col = project_name)) +
-  ggplot2::geom_point(size = 1.2) +
-  ggplot2::scale_color_manual(values = sample_info$color,
-                              breaks = sample_info$project_name) +
-  ggplot2::theme_void() +
-  ggplot2::theme(aspect.ratio = 1,
-                 legend.position = "none")
-```
-
-Cluster :
-
-```{r fig_hfsc_clusters, fig.width = 4, fig.height = 4}
-Seurat::DimPlot(sobj_hfsc, reduction = name2D, pt.size = 1,
-                group.by = "seurat_clusters", cols = grey_palette,
-                label = TRUE, label.size = 7) +
-  ggplot2::theme(aspect.ratio = 1) +
-  Seurat::NoAxes() +
-  Seurat::NoLegend()
-```
-
-Heatmap with proportions :
-
-```{r fig_hfsc_heatmap, fig.width = 5.5, fig.height = 5.5, class.source = "fold-hide"}
-cluster_markers = c("TGFB2", "ANGPTL7", "EPCAM", "KRT75", "NOTCH3", "PTHLH")
-
-## Bottom annotation : gene expression by cluster
-ht_annot = Seurat::FetchData(sobj_hfsc, slot = "data", vars = cluster_markers) %>%
-  as.data.frame()
-ht_annot$clusters = sobj_hfsc$seurat_clusters
-ht_annot = ht_annot %>%
-  dplyr::group_by(clusters) %>%
-  dplyr::summarise_all(funs('mean' = mean)) %>%
-  as.data.frame() %>%
-  dplyr::select(-clusters) %>%
-  `colnames<-`(c(cluster_markers))
-
-ha_bottom = ComplexHeatmap::HeatmapAnnotation(df = ht_annot,
-                                              which = "column",
-                                              show_legend = TRUE,
-                                              col = setNames(nm = cluster_markers,
-                                                             lapply(cluster_markers, FUN = color_fun)),
-                                              annotation_name_side = "left")
-
-## Right annotation : number of cells by dataset
-ht_annot = table(sobj_hfsc$sample_identifier) %>%
-  as.data.frame.table() %>%
-  `colnames<-`(c("sample_identifier", "nb_cells")) %>%
-  `rownames<-`(.$sample_identifier) %>%
-  dplyr::select(-sample_identifier)
-
-ha_right = ComplexHeatmap::HeatmapAnnotation(
-  df = ht_annot,
-  which = "row",
-  show_legend = TRUE,
-  annotation_name_side = "bottom",
-  col = list(nb_cells  = circlize::colorRamp2(colors = RColorBrewer::brewer.pal(name = "Greys", n = 9),
-                                              breaks = seq(from = range(ht_annot$nb_cells)[1],
-                                                           to = range(ht_annot$nb_cells)[2],
-                                                           length.out = 9))))
-
-## Heatmap
-ht = aquarius::plot_prop_heatmap(df = sobj_hfsc@meta.data[, c("sample_identifier", "seurat_clusters")],
-                                 bottom_annotation = ha_bottom,
-                                 # right_annotation = ha_right,
-                                 cluster_rows = TRUE,
-                                 column_names_centered = TRUE,
-                                 prop_margin = 1,
-                                 row_names_gp = grid::gpar(names = sample_info$sample_identifier,
-                                                           col = sample_info$color,
-                                                           fontface = "bold"),
-                                 row_title = "Sample",
-                                 column_title = "Cluster")
-
-ComplexHeatmap::draw(ht,
-                     merge_legend = TRUE,
-                     heatmap_legend_side = "bottom")
-```
-
-Heatmap for cluster 0 and 8 :
-
-```{r fig_hfsc_heatmap_cluster08, fig.width = 5.5, fig.height = 10, class.source = "fold-hide"}
-subsobj = subset(sobj_hfsc, seurat_clusters %in% c(0,8))
-
-features_oi = rownames(list_results$cluster_0_8)
-features_oi = features_oi[!grepl(features_oi, pattern = "^RP")]
-
-# Matrix
-mat_expr = Seurat::GetAssayData(subsobj)
-mat_expr = mat_expr[features_oi, ]
-mat_expr = Matrix::t(mat_expr)
-mat_expr = cbind(mat_expr, subsobj$percent.mt)
-colnames(mat_expr)[ncol(mat_expr)] = "percent.rb"
-mat_expr = dynutils::scale_quantile(mat_expr) # between 0 and 1
-mat_expr = Matrix::t(mat_expr)
-dim(mat_expr) # genes x cells
-## Colors
-list_colors = list()
-
-# Heatmap
-list_colors[["expression"]] = rev(RColorBrewer::brewer.pal(name = "RdBu", n = 9))
-
-# Sample annotation (top annotation)
-list_colors[["sample_type"]] = sample_type_colors
-list_colors[["sample_identifier"]] = setNames(nm = sample_info$sample_identifier,
-                                              sample_info$color)
-# list_colors[["seurat_clusters"]] = setNames(aquarius::gg_color_hue(length(levels(subsobj$seurat_clusters))),
-#                                             nm = levels(subsobj$seurat_clusters))
-# Cells order
-column_order = subsobj@meta.data %>%
-  dplyr::arrange(sample_type, sample_identifier) %>%
-  rownames()
-column_order = match(column_order, rownames(subsobj@meta.data))
-
-# Heatmap
-ha_top = HeatmapAnnotation(sample_type = subsobj$sample_type,
-                           sample_identifier = subsobj$sample_identifier,
-                           # clusters = subsobj$seurat_clusters,
-                           col = list(sample_type = list_colors[["sample_type"]],
-                                      sample_identifier = list_colors[["sample_identifier"]]
-                                      # clusters = list_colors[["seurat_clusters"]]
-                           ))
-
-
-# g1 : REACTOME_CYTOKINE_SIGNALING_IN_IMMUNE_SYSTEM
-# g2 : GOBP_APOPTOTIC_PROCESS
-g1_genes = c("B2M", "HLA-C", "HLA-A", "MIF", "PPIA", "JUNB", "IFITM3")
-g2_genes = c("Jun", "ATF3", "BTG2", "RHOB", "NFKBIA", "SGK1", "KLF9",
-             "CAV1", "DDIT4", "PDK4", "TXNIP", "RNF1152", "TLE1")
-ha_right = data.frame(genes =  c(features_oi, "percent.rb"), rownames = c(features_oi, "percent.rb"))
-ha_right$group = case_when(ha_right$genes %in% g1_genes ~ "REACTOME_CYTOKINE_SIGNALING_IN_IMMUNE_SYSTEM",
-                           ha_right$genes %in% g2_genes ~ "GOBP_APOPTOTIC_PROCESS",
-                           TRUE ~ "others")
-
-list_colors[["group"]] = setNames(
-  nm = c("REACTOME_CYTOKINE_SIGNALING_IN_IMMUNE_SYSTEM", "GOBP_APOPTOTIC_PROCESS", "others"),
-  c("red", "black", "gray90"))
-
-ha_right = HeatmapAnnotation(group = ha_right$group,
-                             col = list(group = list_colors[["group"]]),
-                             which = "row",
-                             show_annotation_name = FALSE,
-                             show_legend = TRUE)
-
-# Heatmap
-ht = Heatmap(as.matrix(mat_expr),
-             heatmap_legend_param = list(title = "Expression", at = c(0, 1), 
-                                         labels = c("low", "high")),
-             col = list_colors[["expression"]],
-             top_annotation = ha_top,
-             right_annotation = ha_right,
-             show_column_names = FALSE,
-             column_order = column_order,
-             column_gap = unit(2, "mm"),
-             cluster_rows = FALSE,
-             row_title = NULL,
-             row_names_gp = grid::gpar(fontsize = 10, fontface = "plain"),
-             use_raster = FALSE,
-             show_heatmap_legend = TRUE,
-             border = TRUE)
-
-ComplexHeatmap::draw(ht,
-                     merge_legend = TRUE,
-                     heatmap_legend_side = "bottom",
-                     annotation_legend_side = "bottom")
-```
-
-Violin plots split by sample :
-
-```{r fig_hfsc_vln_split, fig.width = 6, fig.height = 4}
-features_oi = c("IFITM3", "DDIT4")
-
-plot_list = lapply(features_oi, FUN = function(feature) {
-  p = Seurat::VlnPlot(subsobj, group.by = "sample_identifier",
-                      features = feature, cols = sample_info$color) +
-    ggplot2::theme(axis.title.x = element_blank(),
-                   legend.position = "none")
-  
-  return(p)
-})
-
-names(plot_list) = features_oi
-plot_list
-```
-
-Feature plots split by sample type :
-
-```{r fig_hfsc_feature_split, fig.width = 6, fig.height = 3}
-plot_list = lapply(features_oi, FUN = function(one_gene) {
-  p = aquarius::plot_split_dimred(sobj_hfsc,
-                                  reduction = name2D,
-                                  split_by = "sample_type",
-                                  color_by = one_gene,
-                                  color_palette = c("gray70", "#FDBB84", "#EF6548", "#7F0000", "black"),
-                                  main_pt_size = 0.6,
-                                  bg_pt_size = 0.6,
-                                  order = TRUE,
-                                  bg_color = "gray95")
-  p = patchwork::wrap_plots(p, nrow = 1) +
-    patchwork::plot_layout(guides = "collect") +
-    ggplot2::theme(legend.position = "right") &
-    ggplot2::theme(plot.subtitle = element_blank())
-  return(p)
-})
-
-names(plot_list) = features_oi
-plot_list
-```
-
-Violin plots split by sample type :
-
-```{r fig_hfsc_vln_sample_type, fig.width = 2, fig.height = 3, class.source = "fold-hide"}
-plot_list = lapply(features_oi, FUN = function(feature) {
-  # t-test between sample type
-  feature_expr = subsobj@assays$RNA@data[feature, ]
-  feature_hs = feature_expr[subsobj$sample_type == "HS"]
-  feature_hd = feature_expr[subsobj$sample_type == "HD"]
-  feature_hs_VS_feature_hd = stats::t.test(feature_hs, feature_hd)
-  feature_hs_VS_feature_hd
-  
-  # Significance associated with p-value
-  pval = feature_hs_VS_feature_hd$p.value
-  
-  significance = case_when(pval > 0.05 ~ "ns",
-                           pval > 0.01 & pval <= 0.05 ~ "*",
-                           pval > 0.001 & pval <= 0.01 ~ "**",
-                           pval <= 0.001 ~ "***")
-  
-  # Plot
-  p = Seurat::VlnPlot(subsobj, group.by = "sample_type", pt.size = 0.3,
-                      features = feature) +
-    ggplot2::scale_fill_manual(values = sample_type_colors,
-                               breaks = names(sample_type_colors)) +
-    # Significance bar
-    ggplot2::geom_segment(data = data.frame(1), inherit.aes = FALSE,
-                          size = 0.5,
-                          x = 1, xend = 2,
-                          y = max(feature_expr)+0.3, yend = max(feature_expr)+0.3) +
-    ggplot2::geom_label(data = data.frame(1), inherit.aes = FALSE,
-                        x = 1.5, y = max(feature_expr)+0.35,
-                        label = significance,
-                        fill = NA, label.size = 0) +
-    ggplot2::lims(y = c(0, max(feature_expr)+0.4)) +
-    # Theme
-    ggplot2::theme(axis.title.x = element_blank(),
-                   legend.position = "none")
-  
-  return(p)
-})
-
-names(plot_list) = features_oi
-plot_list
-```
-
-
-Barplot with number of HF-SCss and total number of cells :
-
-```{r fig_hfsc_barplot, fig.width = 5.5, fig.height = 4.5}
-quantif = dplyr::left_join(
-  x = table(sobj$sample_identifier) %>%
-    as.data.frame.table() %>%
-    `colnames<-`(c("Sample", "nb_cells")),
-  y = table(sobj_hfsc$sample_identifier) %>%
-    as.data.frame.table() %>%
-    `colnames<-`(c("Sample", "nb_hfsc")),
-  by = "Sample") %>%
-  dplyr::mutate(prop_hfsc = round(100*nb_hfsc / nb_cells, 2))
-
-quantif_to_plot = rbind.data.frame(
-  data.frame(Sample = quantif$Sample,
-             nb_cells = quantif$nb_cells - quantif$nb_hfsc,
-             cell_type = "others",
-             stringsAsFactors = FALSE),
-  data.frame(Sample = quantif$Sample,
-             nb_cells = quantif$nb_hfsc,
-             cell_type = "hfsc",
-             stringsAsFactors = FALSE)) %>%
-  dplyr::mutate(cell_type = factor(cell_type, levels = c("others", "hfsc")))
-
-aquarius::plot_barplot(df = quantif_to_plot,
-                       x = "Sample", y = "nb_cells", fill = "cell_type",
-                       position = position_fill()) +
-  ggplot2::geom_label(data = quantif, inherit.aes = FALSE,
-                      aes(x = .data$Sample, y = 0.05+.data$prop_hfsc/100, label = .data$nb_hfsc),
-                      label.size = 0, size = 5, fill = NA) +
-  ggplot2::scale_fill_manual(values = c("gray90", color_markers[["HF-SCs"]]),
-                             breaks = c("others", "hfsc"),
-                             name = "Cell Type") +
-  ggplot2::scale_y_continuous(breaks = seq(0, 1, by = 0.25),
-                              labels = paste0(seq(0, 100, by = 25), sep = " %"),
-                              expand = ggplot2::expansion(add = c(0, 0.05))) +
-  ggplot2::theme(axis.title.y = element_blank(),
-                 axis.line.x = element_line(colour = "lightgray"),
-                 text = element_text(size = 15),
-                 legend.position = "none")
-```
-
-# ORS and IFE basal
-
-## Settings
-
-We load the ORS + IFE basal dataset :
-
-```{r sobj_ors_ifeb}
-sobj_ors_ifeb = readRDS(paste0(data_dir, "/4_zoom/3_zoom_ors_ifeb/ors_ifeb_sobj.rds"))
-sobj_ors_ifeb
-```
-
-
-This is the projection name to visualize cells :
-
-```{r sobj_name2D_ors_ifeb}
-name2D = "harmony_20_tsne"
-```
-
-To represent results from differential expression, we load the analyses results :
-
-```{r list_results_ors_ifeb}
-list_results = readRDS(paste0(data_dir, "/4_zoom/3_zoom_ors_ifeb/ors_ifeb_list_results.rds"))
-
-lapply(list_results, FUN = names)
-```
-
-## Preparation
-
-We defined cluster type :
-
-```{r cluster_type_ors_ifeb, fig.width = 7, fig.height = 5}
-cluster_type = table(sobj_ors_ifeb$cell_type, sobj_ors_ifeb$seurat_clusters) %>%
-  prop.table(., margin = 2) %>%
-  apply(., 2, which.max)
-cluster_type = setNames(nm = names(cluster_type),
-                        levels(sobj_ors_ifeb$cell_type)[cluster_type])
-
-sobj_ors_ifeb$cluster_type = cluster_type[sobj_ors_ifeb$seurat_clusters]
-sobj_ors_ifeb$cluster_type = factor(sobj_ors_ifeb$cluster_type,
-                                  levels = c("ORS", "IFE basal"))
-```
-
-## Figures
-
-ORS + IFE basal on the full atlas :
-
-```{r fig_ors_ifeb_location, fig.width = 2, fig.height = 2}
-sobj$cell_bc = colnames(sobj)
-sobj_ors_ifeb$cell_bc = colnames(sobj_ors_ifeb)
-sobj$is_ors_ifeb = dplyr::left_join(sobj@meta.data[, c("cell_bc", "percent.mt")],
-                                  sobj_ors_ifeb@meta.data[, c("cell_bc", "cluster_type")],
-                                  by = "cell_bc")[, "cluster_type"]
-
-Seurat::DimPlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
-                group.by = "is_ors_ifeb", order = "TRUE") +
-  ggplot2::scale_color_manual(values = c(color_markers[c("ORS", "IFE basal")], bg_color),
-                              breaks = c("ORS", "IFE basal", NA), na.value = bg_color) +
-  ggplot2::labs(title = "ORS + IFE basal",
-                subtitle = paste0(ncol(sobj_ors_ifeb), " cells")) +
-  ggplot2::theme(aspect.ratio = 1,
-                 plot.title = element_text(hjust = 0.5, face = "bold"),
-                 plot.subtitle = element_text(hjust = 0.5)) +
-  Seurat::NoAxes() + Seurat::NoLegend()
-```
-
-
-Project name :
-
-```{r fig_ors_ifeb_project_name, fig.width = 4, fig.height = 4}
-# Random order
-set.seed(1234)
-rnd_order = sample(colnames(sobj_ors_ifeb), replace = FALSE, size = ncol(sobj_ors_ifeb))
-
-# Extract coordinates
-cells_coord = sobj_ors_ifeb@reductions[[name2D]]@cell.embeddings %>%
-  as.data.frame() %>%
-  `colnames<-`(c("Dim1", "Dim2"))
-cells_coord$project_name = sobj_ors_ifeb$project_name
-cells_coord = cells_coord[(rnd_order), ]
-
-# Plot
-ggplot2::ggplot(cells_coord, aes(x = Dim1, y = Dim2, col = project_name)) +
-  ggplot2::geom_point(size = 1.2) +
-  ggplot2::scale_color_manual(values = sample_info$color,
-                              breaks = sample_info$project_name) +
-  ggplot2::theme_void() +
-  ggplot2::theme(aspect.ratio = 1,
-                 legend.position = "none")
-```
-
-Cluster :
-
-```{r fig_ors_ifeb_clusters, fig.width = 4, fig.height = 4}
-Seurat::DimPlot(sobj_ors_ifeb, reduction = name2D, pt.size = 1,
-                group.by = "seurat_clusters", cols = grey_palette,
-                label = TRUE, label.size = 8) +
-  ggplot2::theme(aspect.ratio = 1) +
-  Seurat::NoAxes() +
-  Seurat::NoLegend()
-```
-
-Cluster type :
-
-```{r fig_ors_ifeb_cluster_type, fig.width = 4, fig.height = 4}
-Seurat::DimPlot(sobj_ors_ifeb, reduction = name2D, pt.size = 1,
-                group.by = "cluster_type", cols = color_markers) +
-  ggplot2::theme(aspect.ratio = 1) +
-  Seurat::NoAxes() +
-  Seurat::NoLegend()
-```
-
-Cluster type split by sample type :
-
-```{r fig_ors_ifeb_cluster_type_split, fig.width = 8, fig.height = 4}
-plot_list = aquarius::plot_split_dimred(sobj_ors_ifeb, reduction = name2D,
-                                        group_by = "cluster_type",
-                                        group_color = color_markers,
-                                        split_by = "sample_type",
-                                        bg_pt_size = 1, main_pt_size = 1,
-                                        bg_color = bg_color)
-
-patchwork::wrap_plots(plot_list) &
-  Seurat::NoLegend()
-```
-
-Number of cells by cluster and by sample :
-
-```{r ibl_ors_table_clusters}
-table(sobj_ors_ifeb$seurat_clusters,
-      sobj_ors_ifeb$sample_identifier)
-
-table(sobj_ors_ifeb$cluster_type,
-      sobj_ors_ifeb$sample_identifier)
-```
-
-Separate cluster 5 :
-
-```{r ibl_ors_table_clusters_sep5}
-sobj_ors_ifeb$cluster_type_sep5 = ifelse(sobj_ors_ifeb$seurat_clusters == 5,
-                                       yes = "ORS_5",
-                                       no = as.character(sobj_ors_ifeb$cluster_type)) %>%
-  as.factor()
-
-table(sobj_ors_ifeb$cluster_type_sep5,
-      sobj_ors_ifeb$sample_type)
-```
-
-
-Barplot by cluster category :
-
-```{r fig_ors_ifeb_barplot, fig.width = 5.5, fig.height = 4.5}
-quantif = table(sobj_ors_ifeb$sample_identifier) %>%
-  as.data.frame.table() %>%
-  `colnames<-`(c("Sample", "nb_cells"))
-
-quantif_to_plot = table(sobj_ors_ifeb$sample_identifier,
-                        sobj_ors_ifeb$cluster_type_sep5) %>%
-  as.data.frame.table() %>%
-  `colnames<-`(c("Sample", "CellType", "Number")) %>%
-  dplyr::mutate(Style = ifelse(CellType == "ORS_5", yes = "IL1R2+", no = "IL1R2-")) %>%
-  dplyr::mutate(Style = factor(Style, levels = c("IL1R2-", "IL1R2+"))) %>%
-  dplyr::mutate(CellType = ifelse(CellType == "ORS_5", yes = "ORS", no = as.character(CellType))) %>%
-  `colnames<-`(c("Sample", "Cell Type", "Number", "IL1R2 status"))
-
-aquarius::plot_barplot(df = quantif_to_plot,
-                       x = "Sample", y = "Number",
-                       fill = "Cell Type", pattern = "IL1R2 status",
-                       position = position_fill()) +
-  ggplot2::geom_label(data = quantif, inherit.aes = FALSE,
-                      aes(x = .data$Sample, y = 1.05, label = .data$nb_cells),
-                      label.size = 0, size = 5) +
-  ggplot2::scale_fill_manual(values = unlist(color_markers[levels(sobj_ors_ifeb$cluster_type)]),
-                             breaks = names(color_markers[levels(sobj_ors_ifeb$cluster_type)]),
-                             name = "Cell Type") +
-  ggplot2::scale_y_continuous(breaks = seq(0, 1, by = 0.25),
-                              labels = paste0(seq(0, 100, by = 25), sep = " %"),
-                              expand = ggplot2::expansion(add = c(0, 0.05))) +
-  ggplot2::theme(axis.title.y = element_blank(),
-                 axis.line.x = element_line(colour = "lightgray"),
-                 text = element_text(size = 15),
-                 legend.position = "right")
-```
-
-Focus on cluster 5, among ORS :
-
-```{r fig_ors_ifeb_barplot_cluster5, fig.width = 5.5, fig.height = 4.5}
-subsobj = subset(sobj_ors_ifeb, cluster_type == "ORS")
-subsobj$cluster_type_sep5 = ifelse(subsobj$seurat_clusters == 5,
-                                   yes = "ORS_5",
-                                   no = as.character(subsobj$cluster_type)) %>%
-  as.factor()
-
-quantif = table(subsobj$sample_identifier) %>%
-  as.data.frame.table() %>%
-  `colnames<-`(c("Sample", "nb_cells"))
-
-quantif_to_plot = table(subsobj$sample_identifier,
-                        subsobj$cluster_type_sep5) %>%
-  as.data.frame.table() %>%
-  `colnames<-`(c("Sample", "CellType", "Number")) %>%
-  dplyr::mutate(Style = ifelse(CellType == "ORS_5", yes = "IL1R2+", no = "IL1R2-")) %>%
-  dplyr::mutate(Style = factor(Style, levels = c("IL1R2-", "IL1R2+"))) %>%
-  dplyr::mutate(CellType = ifelse(CellType == "ORS_5", yes = "ORS", no = as.character(CellType))) %>%
-  `colnames<-`(c("Sample", "Cell Type", "Number", "IL1R2 status")) %>%
-  dplyr::left_join(., y = quantif, by = "Sample") %>%
-  dplyr::mutate(prop_cluster5 = round(Number/nb_cells, 4))
-
-aquarius::plot_barplot(df = quantif_to_plot,
-                       x = "Sample", y = "Number",
-                       fill = "IL1R2 status",
-                       position = position_fill()) +
-  # ggplot2::geom_label(data = quantif, inherit.aes = FALSE,
-  #                     aes(x = .data$Sample, y = 1.05, label = .data$nb_cells),
-  #                     label.size = 0, size = 5) +
-  ggplot2::geom_label(data = quantif_to_plot %>%
-                        dplyr::filter(`IL1R2 status` == "IL1R2+"),
-                      inherit.aes = FALSE,
-                      aes(x = .data$Sample, y = prop_cluster5 + 0.05, label = .data$Number),
-                      label.size = 0, size = 5, fill = NA, col = "white") +
-  ggplot2::scale_fill_manual(values = c("black", color_markers[["ORS"]]),
-                             breaks = c("IL1R2+", "IL1R2-"),
-                             name = "IL1R2 status") +
-  ggplot2::scale_y_continuous(breaks = seq(0, 1, by = 0.25),
-                              labels = paste0(seq(0, 100, by = 25), sep = " %"),
-                              expand = ggplot2::expansion(add = c(0, 0.05))) +
-  ggplot2::theme(axis.title.y = element_blank(),
-                 axis.line.x = element_line(colour = "lightgray"),
-                 text = element_text(size = 15),
-                 legend.position = "right")
-```
-
-
-DE genes between ORS and IFE basal :
-
-```{r fig_ors_ifeb_de_pop, fig.width = 6, fig.height = 6}
-mark = list_results$ORS_vs_IFEb$mark
-mark$gene_name = rownames(mark)
-mark_label = rbind(
-  # up-regulated in ORS
-  mark %>% dplyr::top_n(., n = 20, wt = avg_logFC),
-  # up-regulated in IFE basal
-  mark %>% dplyr::top_n(., n = 20, wt = -avg_logFC),
-  # representative and selective for ORS
-  mark %>% dplyr::top_n(., n = 20, wt = (pct.1 - pct.2)),
-  # representative and selective for IFE basal
-  mark %>% dplyr::top_n(., n = 20, wt = -(pct.1 - pct.2))) %>%
-  dplyr::distinct()
-mark_label = mark_label[!grepl(rownames(mark_label), pattern = "^MT"), ]
-
-avg_logFC_range = setNames(c(min(mark_label$avg_logFC), -1, 0, 1, max(mark_label$avg_logFC)),
-                           nm = c("dodgerblue4", "dodgerblue3", "#B7B7B7", "firebrick3", "firebrick4"))
-
-
-ggplot2::ggplot(mark, aes(x = pct.1, y = pct.2, col = avg_logFC)) +
-  ggplot2::geom_abline(slope = 1, intercept = 0, lty = 2) +
-  ggplot2::geom_point() +
-  ggrepel::geom_label_repel(data = mark_label, max.overlaps = Inf,
-                            aes(x = pct.1, y = pct.2, label = gene_name),
-                            col = "black", fill = NA, size = 3.5, label.size = NA) +
-  ggplot2::labs(x = "Enriched in ORS",
-                y = "Enriched in IFE basal") +
-  ggplot2::scale_color_gradientn(colors = names(avg_logFC_range),
-                                 values = scales::rescale(unname(avg_logFC_range))) +
-  ggplot2::theme_classic() +
-  ggplot2::theme(aspect.ratio = 1)
-```
-
-GSEA plot :
-
-```{r fig_ors_ifeb_keratinization, fig.width = 6, fig.height = 4}
-the_gs_name = "REACTOME_KERATINIZATION" 
-the_content = list_results$ORS_vs_IFEb$gsea@result %>%
-  dplyr::filter(ID == the_gs_name)
-the_subtitle = paste0("\nNES : ", round(the_content$NES, 2),
-                      "\t|\tpvalue : ", round(the_content$pvalue, 4),
-                      "\t|\tset size : ", the_content$setSize, " genes")
-
-enrichplot::gseaplot2(x = list_results$ORS_vs_IFEb$gsea,
-                      geneSetID = the_gs_name) +
-  ggplot2::labs(title = the_gs_name,
-                subtitle = the_subtitle) +
-  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold",
-                                           margin = ggplot2::margin(3, 3, 5, 3)),
-                 plot.subtitle = ggtext::element_markdown(hjust = 0.5,
-                                                          size = 10))
-```
-
-```{r fig_ors_ifeb_ifna, fig.width = 6, fig.height = 4}
-the_gs_name = "HALLMARK_INTERFERON_GAMMA_RESPONSE" 
-the_content = list_results$ORS_vs_IFEb$gsea@result %>%
-  dplyr::filter(ID == the_gs_name)
-the_subtitle = paste0("\nNES : ", round(the_content$NES, 2),
-                      "\t|\tpvalue : ", round(the_content$pvalue, 4),
-                      "\t|\tset size : ", the_content$setSize, " genes")
-
-enrichplot::gseaplot2(x = list_results$ORS_vs_IFEb$gsea,
-                      geneSetID = the_gs_name) +
-  ggplot2::labs(title = the_gs_name,
-                subtitle = the_subtitle) +
-  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold",
-                                           margin = ggplot2::margin(3, 3, 5, 3)),
-                 plot.subtitle = ggtext::element_markdown(hjust = 0.5,
-                                                          size = 10))
-```
-
-Score for both gene sets, in all cells :
-
-```{r plot_vln_score, class.source = "fold-hide"}
-significant = function(pval) {
-  signif = case_when(pval > 0.05 ~ "ns",
-                     pval > 0.01 & pval <= 0.05 ~ "*",
-                     pval > 0.001 & pval <= 0.01 ~ "**",
-                     pval <= 0.001 ~ "***")
-  return(signif)
-}
-
-plot_vln_score = function(score_name, the_gs_name) {
-  # t-test between sample type
-  feature_expr = sobj_ors_ifeb@meta.data[, score_name]
-  
-  ## in IFEb
-  feature_hs = feature_expr[sobj_ors_ifeb$sample_type == "HS" & sobj_ors_ifeb$cluster_type == "IFE basal"]
-  feature_hd = feature_expr[sobj_ors_ifeb$sample_type == "HD" & sobj_ors_ifeb$cluster_type == "IFE basal"]
-  feature_hs_VS_feature_hd = stats::t.test(feature_hs, feature_hd)
-  feature_hs_VS_feature_hd
-  pval_ors = feature_hs_VS_feature_hd$p.value
-  
-  ## in ORS
-  feature_hs = feature_expr[sobj_ors_ifeb$sample_type == "HS" & sobj_ors_ifeb$cluster_type == "ORS"]
-  feature_hd = feature_expr[sobj_ors_ifeb$sample_type == "HD" & sobj_ors_ifeb$cluster_type == "ORS"]
-  feature_hs_VS_feature_hd = stats::t.test(feature_hs, feature_hd)
-  feature_hs_VS_feature_hd
-  pval_ibl = feature_hs_VS_feature_hd$p.value
-  
-  # Significance associated with p-value
-  significance_ors = significant(pval_ors)
-  significance_ibl = significant(pval_ibl)
-  
-  # Plot
-  p = Seurat::VlnPlot(sobj_ors_ifeb, features = score_name, pt.size = 0.05,
-                      split.by = "sample_type", group.by = "cluster_type") +
-    ggplot2::scale_fill_manual(values = sample_type_colors,
-                               breaks = names(sample_type_colors)) +
-    # Significance bar (ORS)
-    ggplot2::geom_segment(data = data.frame(1), inherit.aes = FALSE,
-                          size = 0.5,
-                          x = 0.75, xend = 1.25,
-                          y = max(feature_expr)*1.2, yend = max(feature_expr)*1.2) +
-    ggplot2::geom_label(data = data.frame(1), inherit.aes = FALSE,
-                        x = 1, y = max(feature_expr)*1.25,
-                        label = significance_ibl,
-                        fill = NA, label.size = 0) +
-    # Significance bar (IFEb)
-    ggplot2::geom_segment(data = data.frame(1), inherit.aes = FALSE,
-                          size = 0.5,
-                          x = 1.75, xend = 2.25,
-                          y = max(feature_expr)*1.2, yend = max(feature_expr)*1.2) +
-    ggplot2::geom_label(data = data.frame(1), inherit.aes = FALSE,
-                        x = 2, y = max(feature_expr)*1.25,
-                        label = significance_ors,
-                        fill = NA, label.size = 0) +
-    ggplot2::lims(y = c(0, 1.3*max(feature_expr))) +
-    # Style
-    ggplot2::labs(title = the_gs_name) +
-    ggplot2::theme(axis.title.x = element_blank(),
-                   legend.position = "none")
-  
-  return(p)
-}
-```
-
-```{r fig_ors_ifeb_kera_score, fig.width = 6, fig.height = 4}
-gene_sets = aquarius::get_gene_sets(species = "Homo sapiens")
-
-# Genes in the gene set of interest
-the_gs_name = "REACTOME_KERATINIZATION"
-the_gs_content = gene_sets$gene_sets_full %>%
-  dplyr::filter(gs_name == the_gs_name) %>%
-  dplyr::pull(gene_symbol) %>%
-  unlist()
-
-# Attribute a score
-sobj_ors_ifeb$score_kera = Seurat::AddModuleScore(sobj_ors_ifeb,
-                                                features = list(the_gs_content))$Cluster1
-
-# Violin plot
-plot_vln_score("score_kera", the_gs_name)
-```
-
-```{r fig_ors_ifeb_ifna_score, fig.width = 6, fig.height = 4}
-# Genes in the gene set of interest
-the_gs_name = "HALLMARK_INTERFERON_GAMMA_RESPONSE"
-the_gs_content = gene_sets$gene_sets_full %>%
-  dplyr::filter(gs_name == the_gs_name) %>%
-  dplyr::pull(gene_symbol) %>%
-  unlist()
-
-# Attribute a score
-sobj_ors_ifeb$score_ifng = Seurat::AddModuleScore(sobj_ors_ifeb,
-                                                features = list(the_gs_content))$Cluster1
-
-# Violin plot
-plot_vln_score("score_ifng", the_gs_name)
-```
-
-
-Violin plot for ORS :
-
-```{r fig_ors_ifeb_ibl, fig.width = 2, fig.height = 3, class.source = "fold-hide"}
-subsobj = subset(sobj_ors_ifeb, cluster_type == "ORS")
-features_oi = c("DUSP1", "DDIT4", "MIF", "LGALS7", "ARF5", "S100A9")
-
-# Plot !
-plot_list = lapply(features_oi, FUN = function(feature) {
-  # t-test between sample type
-  feature_expr = subsobj@assays$RNA@data[feature, ]
-  feature_hs = feature_expr[subsobj$sample_type == "HS"]
-  feature_hd = feature_expr[subsobj$sample_type == "HD"]
-  feature_hs_VS_feature_hd = stats::t.test(feature_hs, feature_hd)
-  feature_hs_VS_feature_hd
-  
-  # Significance associated with p-value
-  pval = feature_hs_VS_feature_hd$p.value
-  
-  significance = case_when(pval > 0.05 ~ "ns",
-                           pval > 0.01 & pval <= 0.05 ~ "*",
-                           pval > 0.001 & pval <= 0.01 ~ "**",
-                           pval <= 0.001 ~ "***")
-  
-  # Plot
-  p = Seurat::VlnPlot(subsobj, group.by = "sample_type", pt.size = 0.3,
-                      features = feature) +
-    ggplot2::scale_fill_manual(values = sample_type_colors,
-                               breaks = names(sample_type_colors)) +
-    # Significance bar
-    ggplot2::geom_segment(data = data.frame(1), inherit.aes = FALSE,
-                          size = 0.5,
-                          x = 1, xend = 2,
-                          y = max(feature_expr)+0.3, yend = max(feature_expr)+0.3) +
-    ggplot2::geom_label(data = data.frame(1), inherit.aes = FALSE,
-                        x = 1.5, y = max(feature_expr)+0.35,
-                        label = significance,
-                        fill = NA, label.size = 0) +
-    ggplot2::lims(y = c(0, max(feature_expr)+0.4)) +
-    # Theme
-    ggplot2::theme(axis.title.x = element_blank(),
-                   legend.position = "none")
-  
-  return(p)
-})
-
-names(plot_list) = features_oi
-plot_list
-```
-
-Violin plot for IFE basal :
-
-```{r fig_ors_ifeb_ors, fig.width = 2, fig.height = 3, class.source = "fold-hide"}
-subsobj = subset(sobj_ors_ifeb, cluster_type == "IFE basal")
-features_oi = c("DUSP1", "KLF6", "CLDN1", "CTGF",
-                "S100A9", "CCL2", "IFITM3", "IFI27")
-
-# Plot !
-plot_list = lapply(features_oi, FUN = function(feature) {
-  # t-test between sample type
-  feature_expr = subsobj@assays$RNA@data[feature, ]
-  feature_hs = feature_expr[subsobj$sample_type == "HS"]
-  feature_hd = feature_expr[subsobj$sample_type == "HD"]
-  feature_hs_VS_feature_hd = stats::t.test(feature_hs, feature_hd)
-  feature_hs_VS_feature_hd
-  
-  # Significance associated with p-value
-  pval = feature_hs_VS_feature_hd$p.value
-  
-  significance = case_when(pval > 0.05 ~ "ns",
-                           pval > 0.01 & pval <= 0.05 ~ "*",
-                           pval > 0.001 & pval <= 0.01 ~ "**",
-                           pval <= 0.001 ~ "***")
-  
-  # Plot
-  p = Seurat::VlnPlot(subsobj, group.by = "sample_type", pt.size = 0.3,
-                      features = feature) +
-    ggplot2::scale_fill_manual(values = sample_type_colors,
-                               breaks = names(sample_type_colors)) +
-    # Significance bar
-    ggplot2::geom_segment(data = data.frame(1), inherit.aes = FALSE,
-                          size = 0.5,
-                          x = 1, xend = 2,
-                          y = max(feature_expr)+0.3, yend = max(feature_expr)+0.3) +
-    ggplot2::geom_label(data = data.frame(1), inherit.aes = FALSE,
-                        x = 1.5, y = max(feature_expr)+0.35,
-                        label = significance,
-                        fill = NA, label.size = 0) +
-    ggplot2::lims(y = c(0, max(feature_expr)+0.4)) +
-    # Theme
-    ggplot2::theme(axis.title.x = element_blank(),
-                   legend.position = "none")
-  
-  return(p)
-})
-
-names(plot_list) = features_oi
-plot_list
-```
-
-Split by sample :
-
-```{r fig_ors_ifeb_ors_split, fig.width = 6, fig.height = 4}
-Seurat::VlnPlot(subsobj, group.by = "sample_identifier",
-                features = "IFI27", cols = sample_info$color) +
-  ggplot2::theme(axis.title.x = element_blank(),
-                 legend.position = "none")
-```
-
-Heatmap for cluster 5 vs other ORS :
-
-```{r fig_ors_ifeb_heatmap_cluster5, fig.width = 12, fig.height = 19, class.source = "fold-hide"}
-subsobj = subset(sobj_ors_ifeb, cluster_type == "ORS")
-
-features_oi = c("YBX3", "TXNIP", "KRT14", "KRT15", "NEAT1",
-                "FXYD3", "MT2A", "MT1E", "MT1X", "AQP3", "GLUL",
-                # "HALLMARK_TNFA_SIGNALING_VIA_NFKB"
-                "FOS", "JUNB", "DUSP1", "ZFP36", "NFKBIZ",
-                "ATF3", "RHOB",  "ETS2", "IL18", "KLF4", "KLF6", "KLF9",
-                "KLF3", "KLF5", "COL17A1", "THSD4", "WNT3", "WNT4", "SLPI", "PLAT",
-                "LAMB4", "DCN", "SPINK5",
-                "GSTM3", "ALDH3A1",  "LGALS7B", "SLC38A2", "EHF",  "CLEC2B",
-                "IL20RB", "IL1R2", "IFI27", "CXCL14", "HLA-C", "GPSM2", "DAAM1",   "ID1",
-                "RNASET2", "HOPX", "POU3F1", "SPRY1", "AR", "PDGFC",
-                "WFDC2", "WFDC5", "TSC22D3", "FGFR3",  "LY6D", "IGFBP3", 
-                # Other ORS
-                "APOE", "CTSB", "CALD1", "SOX4",
-                "STMN1", "LMO4", "CEBPB", "TMEM45A", "GPX2", "C1QTNF12", "GJB6",
-                "KRT6A", "KRT17", "RBP1", "CALML3", "PTN", "DAPK2",
-                "EGLN3", "FILIP1L", "ADGRL3", "FST", "EFNB2", "SEMA5A",
-                "FGFR1", "EGR2", "CLDN1", "DEFB1", "CARD18", "MGST1")
-
-# Matrix
-mat_expr = Seurat::GetAssayData(subsobj)
-mat_expr = mat_expr[features_oi, ]
-mat_expr = Matrix::t(mat_expr)
-mat_expr = dynutils::scale_quantile(mat_expr) # between 0 and 1
-mat_expr = Matrix::t(mat_expr)
-dim(mat_expr) # genes x cells
-
-## Colors
-list_colors = list()
-list_colors[["expression"]] = rev(RColorBrewer::brewer.pal(name = "RdBu", n = 9))
-list_colors[["sample_type"]] = sample_type_colors
-list_colors[["sample_identifier"]] = setNames(nm = sample_info$sample_identifier,
-                                              sample_info$color)
-list_colors[["population"]] = setNames(nm = c("IL1R2+ ORS", "other ORS"),
-                                       c("black", color_markers["ORS"]))
-list_colors[["nFeature_RNA"]] = circlize::colorRamp2(breaks = seq(from = min(subsobj$nFeature_RNA),
-                                                                  to = max(subsobj$nFeature_RNA),
-                                                                  length.out = 9),
-                                                     colors = RColorBrewer::brewer.pal(name = "Greys", n = 9))
-
-# Cells order
-column_order = subsobj@meta.data %>%
-  dplyr::mutate(seurat_clusters = factor(seurat_clusters, levels = c(5, 3, 0, 1, 7))) %>%
-  dplyr::mutate(sample_type = factor(sample_type, levels = c("HS", "HD"))) %>%
-  dplyr::arrange(sample_type, seurat_clusters, sample_identifier) %>%
-  rownames()
-column_order = match(column_order, rownames(subsobj@meta.data))
-
-# Annotation
-ha_top = HeatmapAnnotation(sample_type = subsobj$sample_type,
-                           sample_identifier = subsobj$sample_identifier,
-                           population = ifelse(subsobj$cluster_type_sep5 == "ORS",
-                                               yes = "other ORS", no = "IL1R2+ ORS"),
-                           col = list(sample_type = list_colors[["sample_type"]],
-                                      sample_identifier = list_colors[["sample_identifier"]],
-                                      population = list_colors[["population"]]))
-
-ha_bottom = HeatmapAnnotation(nFeature_RNA = subsobj$nFeature_RNA,
-                              col = list(nFeature_RNA = list_colors[["nFeature_RNA"]]))
-
-# Heatmap
-ht = Heatmap(as.matrix(mat_expr),
-             heatmap_legend_param = list(title = "Expression", at = c(0, 1), 
-                                         labels = c("low", "high")),
-             col = list_colors[["expression"]],
-             top_annotation = ha_top,
-             bottom_annotation = ha_bottom,
-             # Cell grouping
-             column_split = subsobj$sample_type,
-             cluster_columns = FALSE,
-             column_order = column_order,
-             column_title = NULL,
-             show_column_dend = FALSE,
-             show_column_names = FALSE,
-             # Genes
-             cluster_rows = FALSE,
-             row_names_gp = grid::gpar(fontsize = 14, fontface = "plain"),
-             # Style
-             use_raster = FALSE,
-             show_heatmap_legend = TRUE,
-             border = TRUE)
-
-ComplexHeatmap::draw(ht,
-                     merge_legend = TRUE,
-                     heatmap_legend_side = "right",
-                     annotation_legend_side = "right")
-```
-
-Genes of interest :
-
-```{r fig_ors_ifeb_genes, fig.width = 2, fig.height = 2}
-genes = c("KRT16", "COL17A1", "DST", "KRT6B", "IL1R2", "WNT3",
-          "IFI27", "CXCL14", "IGFBP3", "KRT15", "CD200", "IL18")
-
-plot_list = lapply(c(1:length(genes)), FUN = function(gene_id) {
-  gene = genes[[gene_id]]
-  
-  sobj_ors_ifeb$my_gene = Seurat::FetchData(sobj_ors_ifeb, gene)[, 1] %>%
-    aquarius::run_rescale(., new_min = 0, new_max = 10)
-  
-  Seurat::FeaturePlot(sobj_ors_ifeb, features = "my_gene", reduction = name2D, pt.size = 0.25) +
-    ggplot2::scale_color_gradientn(colors = aquarius::color_gene,
-                                   breaks = seq(0, 10, by = 2.5),
-                                   labels = c("min", rep("", 3), "max")) +
-    ggplot2::labs(title = gene) +
-    ggplot2::theme(aspect.ratio = 1,
-                   plot.title = element_text(hjust = 0.5, size = 17),
-                   plot.subtitle = element_text(hjust = 0.5, size = 15),
-                   legend.text = element_text(size = 15),
-                   legend.position = "none") +
-    Seurat::NoAxes()
-})
-
-names(plot_list) = genes
-plot_list
-```
-
-
-# HF-SCss to ORS, IFE basal and IFE granular/spinous
-
-## Settings
-
-We load the merged dataset :
-
-```{r sobj_traj}
-sobj_traj = readRDS(paste0(data_dir, "/4_zoom/4_zoom_hfsc_ors_ifeb/non_matrix_sobj_traj_tinga.rds"))
-sobj_traj
-```
-
-
-This is the projection name to visualize cells :
-
-```{r sobj_name2D_traj}
-name2D = "harmony_dm"
-```
-
-We load the trajectory object for visualisation purpose :
-
-```{r load_traj}
-my_traj = readRDS(paste0(data_dir, "/4_zoom/4_zoom_hfsc_ors_ifeb/non_matrix_my_traj_tinga.rds"))
-class(my_traj)
-```
-
-
-## Preparation
-
-We defined cell type based on individual object :
-
-```{r cluster_type_traj, fig.width = 7, fig.height = 5}
-sobj_ors_ifeb$cell_bc = colnames(sobj_ors_ifeb)
-sobj_traj$cell_bc = colnames(sobj_traj)
-sobj_traj$cluster_type = dplyr::left_join(sobj_traj@meta.data[, c("cell_bc", "percent.mt")],
-                                          sobj_ors_ifeb@meta.data[, c("cell_bc", "cluster_type")],
-                                          by = "cell_bc")[, "cluster_type"] %>% as.character()
-sobj_traj$cluster_type = ifelse(colnames(sobj_traj) %in% colnames(sobj_hfsc),
-                                yes = "HF-SCs",
-                                no = sobj_traj$cluster_type) %>%
-  as.factor()
-```
-
-## Figures
-
-Cells on the full atlas :
-
-```{r fig_traj_location, fig.width = 2, fig.height = 2}
-sobj$cell_bc = colnames(sobj)
-sobj_traj$cell_bc = colnames(sobj_traj)
-sobj$is_traj = dplyr::left_join(sobj@meta.data[, c("cell_bc", "percent.mt")],
-                                sobj_traj@meta.data[, c("cell_bc", "cluster_type")],
-                                by = "cell_bc")[, "cluster_type"]
-
-Seurat::DimPlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
-                group.by = "is_traj", order = levels(sobj_traj$cluster_type)) +
-  ggplot2::scale_color_manual(values = c(color_markers[c("ORS", "IFE basal", "HF-SCs")], bg_color),
-                              breaks = c("ORS", "IFE basal", "HF-SCs", NA), na.value = bg_color) +
-  ggplot2::theme(aspect.ratio = 1) +
-  Seurat::NoAxes() + Seurat::NoLegend()
-```
-
-
-Project name :
-
-```{r fig_traj_project_name, fig.width = 4, fig.height = 4}
-# Random order
-set.seed(1234)
-rnd_order = sample(colnames(sobj_traj), replace = FALSE, size = ncol(sobj_traj))
-
-# Extract coordinates
-cells_coord = sobj_traj@reductions[[name2D]]@cell.embeddings %>%
-  as.data.frame() %>%
-  `colnames<-`(c("Dim1", "Dim2"))
-cells_coord$sample_type = sobj_traj$sample_type
-cells_coord = cells_coord[order(sobj_traj$sample_type), ]
-
-# Plot
-ggplot2::ggplot(cells_coord, aes(x = Dim1, y = Dim2, col = sample_type)) +
-  ggplot2::geom_point(size = 1.2) +
-  ggplot2::scale_color_manual(values = sample_type_colors,
-                              breaks = names(sample_type_colors)) +
-  ggplot2::theme_void() +
-  ggplot2::theme(aspect.ratio = 1,
-                 legend.position = "none")
-```
-
-
-Cluster type :
-
-```{r fig_traj_cluster_type, fig.width = 3, fig.height = 3}
-Seurat::DimPlot(sobj_traj, reduction = name2D, pt.size = 0.5,
-                group.by = "cluster_type", cols = color_markers) +
-  ggplot2::theme(aspect.ratio = 1) +
-  Seurat::NoAxes() +
-  Seurat::NoLegend()
-```
-
-Pseudotime :
-
-```{r fig_traj_pseudotime, fig.width = 6, fig.height = 4}
-Seurat::FeaturePlot(sobj_traj, reduction = name2D, pt.size = 0.5,
-                    features = "pseudotime") +
-  ggplot2::scale_color_gradientn(colors = viridis::viridis(n = 100)) +
-  ggplot2::lims(x = range(sobj_traj@reductions[[name2D]]@cell.embeddings[, 1]),
-                y = range(sobj_traj@reductions[[name2D]]@cell.embeddings[, 2])) +
-  ggplot2::theme(aspect.ratio = 1,
-                 plot.title = element_blank()) +
-  Seurat::NoAxes()
-```
-
-Pseudotime with dynplot's function :
-
-```{r fig_traj_pseudotime_dynplot, fig.width = 5, fig.height = 5}
-dynplot::plot_dimred(trajectory = my_traj,
-                     dimred = sobj_traj[[name2D]]@cell.embeddings,
-                     # Cells
-                     color_cells = 'pseudotime',
-                     size_cells = 1.6,
-                     border_radius_percentage = 0,
-                     # Trajectory
-                     plot_trajectory = TRUE,
-                     color_trajectory = "none",
-                     label_milestones = FALSE,
-                     size_milestones = 0,
-                     size_transitions = 1)
-```
-
-Violin plots for HF-SCs markers :
-
-```{r fig_traj_vln, fig.width = 2.5, fig.height = 4}
-features_oi = c("SOX9", "TCF4", "TBX1", "NFATC1", 
-                "LHX2", "RUNX1", "VIM", "TCF3", "FGF18", "CD34",
-                # HF-SCs + IFE basal
-                "COL17A1", "MT2A", "TXNIP", "CAVIN1",
-                # HF-SCs + ORS
-                "TUBB2A", "KRT6B", "MARCKSL1", "ID4", "CYP1B1", "BARX2",
-                # HF-SCs
-                "LMCD1", "TCEAL2", "FRZB", "THBS1", "DIO2")
-
-plot_list = lapply(features_oi, FUN = function(one_gene) {
-  p = Seurat::VlnPlot(sobj_traj, group.by = "cluster_type",
-                      features = one_gene, pt.size = 0.001) +
-    ggplot2::scale_fill_manual(values = color_markers[levels(sobj_traj$cluster_type)],
-                               breaks = levels(sobj_traj$cluster_type)) +
-    ggplot2::theme(plot.subtitle = element_text(hjust = 0.5),
-                   axis.title.x = element_blank(),
-                   legend.position = "none")
-  return(p)
-})
-
-names(plot_list) = features_oi
-plot_list
-```
-
-Same split by sample type :
-
-```{r fig_traj_vln_split, fig.width = 5, fig.height = 4}
-plot_list = lapply(features_oi, FUN = function(one_gene) {
-  p = Seurat::VlnPlot(sobj_traj, group.by = "cluster_type", split.by = "sample_type",
-                      features = one_gene, pt.size = 0.001) +
-    ggplot2::scale_fill_manual(values = sample_type_colors,
-                               breaks = names(sample_type_colors)) +
-    ggplot2::theme(plot.subtitle = element_text(hjust = 0.5),
-                   axis.title.x = element_blank(),
-                   legend.position = "none")
-  return(p)
-})
-
-names(plot_list) = features_oi
-plot_list
-```
-
-On the diffusion map :
-
-```{r fig_traj_feature, fig.width = 5, fig.height = 5}
-axis_lims = apply(sobj_traj@reductions[["harmony_dm"]]@cell.embeddings[, c(1:2)], 2, range)
-
-plot_list = lapply(features_oi, FUN = function(one_gene) {
-  p = Seurat::FeaturePlot(sobj_traj, features = one_gene, reduction = "harmony_dm") +
-    ggplot2::scale_color_gradientn(colors = aquarius::color_gene,
-                                   breaks = c(0:10)) +
-    ggplot2::lims(x = axis_lims[, 1],
-                  y = axis_lims[, 2]) +
-    ggplot2::theme(aspect.ratio = 1) +
-    Seurat::NoAxes()
-  
-  return(p)
-})
-
-names(plot_list) = features_oi
-plot_list
-```
-
-Heatmap :
-
-```{r fig_traj_heatmap, fig.width = 10, fig.height = 10, class.source = "fold-hide"}
-# Matrix
-mat_expr = Seurat::GetAssayData(sobj_traj)
-mat_expr = mat_expr[features_oi, ]
-mat_expr = Matrix::t(mat_expr)
-mat_expr = dynutils::scale_quantile(mat_expr) # between 0 and 1
-mat_expr = Matrix::t(mat_expr)
-dim(mat_expr) # genes x cells
-
-## Colors
-list_colors = list()
-
-# Heatmap
-list_colors[["expression"]] = rev(RColorBrewer::brewer.pal(name = "RdBu", n = 9))
-
-# Sample annotation (top annotation)
-list_colors[["sample_type"]] = sample_type_colors
-list_colors[["cluster_type"]] = setNames(nm = levels(sobj_traj$cluster_type),
-                                         color_markers[levels(sobj_traj$cluster_type)])
-list_colors[["pseudotime"]] = circlize::colorRamp2(breaks = seq(min(sobj_traj$pseudotime, na.rm = TRUE),
-                                                                max(sobj_traj$pseudotime, na.rm = TRUE),
-                                                                length.out = 9),
-                                                   colors = viridis::viridis(9))
-
-# Cells order
-column_order = sobj_traj@meta.data %>%
-  dplyr::arrange(cluster_type, pseudotime) %>%
-  rownames()
-column_order = match(column_order, rownames(sobj_traj@meta.data))
-
-# Heatmap
-ha_top = HeatmapAnnotation(cluster_type = sobj_traj$cluster_type,
-                           pseudotime = sobj_traj$pseudotime,
-                           sample_type = sobj_traj$sample_type,
-                           col = list(sample_type = list_colors[["sample_type"]],
-                                      cluster_type = list_colors[["cluster_type"]],
-                                      pseudotime = list_colors[["pseudotime"]]))
-
-# Heatmap
-ht = Heatmap(as.matrix(mat_expr),
-             heatmap_legend_param = list(title = "Expression", at = c(0, 1), 
-                                         labels = c("low", "high")),
-             col = list_colors[["expression"]],
-             top_annotation = ha_top,
-             show_column_names = FALSE,
-             column_order = column_order,
-             column_gap = unit(2, "mm"),
-             column_split = sobj_traj$cluster_type,
-             cluster_rows = FALSE,
-             row_title = NULL,
-             row_names_gp = grid::gpar(fontsize = 14, fontface = "plain"),
-             use_raster = FALSE,
-             show_heatmap_legend = TRUE,
-             border = TRUE)
-
-ComplexHeatmap::draw(ht,
-                     merge_legend = TRUE,
-                     heatmap_legend_side = "bottom",
-                     annotation_legend_side = "bottom")
-```
-
-# Matrix cells
-
-## Settings
-
-We load the immune cells dataset :
-
-```{r sobj_mat}
-sobj_mat = readRDS(paste0(data_dir, "/4_zoom/5_zoom_matrix/matrix_sobj.rds"))
-sobj_mat
-```
-
-
-This is the projection name to visualize cells :
-
-```{r sobj_name2D_mat}
-name2D = "harmony_19_tsne"
-```
-
-To represent results from differential expression, we load the analyses results :
-
-```{r list_results_mat}
-list_results = readRDS(paste0(data_dir, "/4_zoom/5_zoom_matrix/matrix_list_results.rds"))
-
-lapply(list_results, FUN = names)
-```
-
-## Preparation
-
-We defined factor levels for cluster type :
-
-```{r sobj_mat_cluster_type}
-sobj_mat$cluster_type = factor(sobj_mat$cluster_type,
-                               levels = c("medulla", "cortex", "IRS", "cuticle"))
-
-table(sobj_mat$cluster_type, sobj_mat$sample_identifier)
-```
-
-
-## Figures
-
-Matrix cells on the full atlas :
-
-```{r fig_mat_location, fig.width = 2, fig.height = 2}
-sobj$is_matrix = (colnames(sobj) %in% colnames(sobj_mat))
-
-Seurat::DimPlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
-                group.by = "is_matrix", order = "TRUE") +
-  ggplot2::scale_color_manual(values = c(category_color[["matrix"]], bg_color),
-                              breaks = c(TRUE, FALSE)) +
-  ggplot2::labs(title = "Matrix cells",
-                subtitle = paste0(ncol(sobj_mat), " cells")) +
-  ggplot2::theme(aspect.ratio = 1,
-                 plot.title = element_text(hjust = 0.5, face = "bold"),
-                 plot.subtitle = element_text(hjust = 0.5)) +
-  Seurat::NoAxes() + Seurat::NoLegend()
-```
-
-Cluster type :
-
-```{r fig_mat_cluster_type, fig.width = 4, fig.height = 4}
-Seurat::DimPlot(sobj_mat, reduction = name2D, pt.size = 1,
-                group.by = "cluster_type", cols = color_markers) +
-  ggplot2::theme(aspect.ratio = 1) +
-  Seurat::NoAxes() +
-  Seurat::NoLegend()
-```
-
-Clustering :
-
-```{r fig_mat_clustering, fig.width = 4, fig.height = 4}
-Seurat::DimPlot(sobj_mat, reduction = name2D, pt.size = 1,
-                group.by = "seurat_clusters", label = TRUE) +
-  ggplot2::theme(aspect.ratio = 1) +
-  Seurat::NoAxes() +
-  Seurat::NoLegend()
-```
-
-Barplot with proportion :
-
-```{r fig_mat_barplot_category, fig.width = 10, fig.height = 3.5}
-quantif_total = table(sobj$sample_identifier) %>%
-  as.data.frame.table() %>%
-  `colnames<-`(c("Sample", "nb_cells"))
-
-# Number of matrix cells
-quantif_immune = table(sobj_mat$sample_identifier, sobj_mat$cluster_type) %>%
-  as.data.frame.table() %>%
-  `colnames<-`(c("Sample", "CellType", "Number")) %>%
-  # proportion for the whole dataset
-  dplyr::left_join(., quantif_total, by = "Sample") %>%
-  dplyr::mutate(prop_cells = 100*round(Number/nb_cells,4)) %>%
-  `colnames<-`(c("Sample", "CellType", "Number", "Total", "Proportion"))
-
-ggplot2::ggplot(data = quantif_immune,
-                aes(x = Sample, y = Proportion, fill = CellType)) +
-  ggplot2::geom_bar(stat = "identity", position = position_dodge(width = 0.7),
-                    color = "black", size = 0.25, width = 0.7) +
-  ggplot2::scale_fill_manual(values = unlist(color_markers[levels(sobj_mat$cluster_type)]),
-                             breaks = names(color_markers[levels(sobj_mat$cluster_type)]),
-                             name = "Cell Type") +
-  # Theme
-  ggplot2::scale_y_continuous(limits = c(0, max(quantif_immune$Proportion)),
-                              expand = ggplot2::expansion(add = c(0, 1))) +
-  ggplot2::labs(y = "% of matrix cells by sample") +
-  ggplot2::theme_classic() +
-  ggplot2::theme(axis.title.x = element_blank(),
-                 axis.line.x = element_line(colour = "lightgray"),
-                 text = element_text(size = 15),
-                 axis.text.x = element_text(angle = 0, hjust = 0.5),
-                 panel.grid.major.y = element_line(color = "lightgray", size = 0.5),
-                 panel.grid.minor.y = element_line(color = "lightgray", size = 0.5))
-```
-
-GSEA plots :
-
-```{r fig_mat_gsea_1, fig.width = 6, fig.height = 4}
-the_gs_name = "GOCC_KERATIN_FILAMENT" 
-the_content = list_results$cortex$gsea@result %>%
-  dplyr::filter(ID == the_gs_name)
-the_subtitle = paste0("\nNES : ", round(the_content$NES, 2),
-                      "\t|\tpvalue : ", round(the_content$pvalue, 4),
-                      "\t|\tset size : ", the_content$setSize, " genes")
-
-enrichplot::gseaplot2(x = list_results$cortex$gsea,
-                      geneSetID = the_gs_name) +
-  ggplot2::labs(title = the_gs_name,
-                subtitle = the_subtitle) +
-  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold",
-                                           margin = ggplot2::margin(3, 3, 5, 3)),
-                 plot.subtitle = ggtext::element_markdown(hjust = 0.5,
-                                                          size = 10))
-```
-
-```{r fig_mat_gsea_2, fig.width = 6, fig.height = 4}
-the_gs_name = "GOBP_INTERMEDIATE_FILAMENT_ORGANIZATION" 
-the_content = list_results$cortex$gsea@result %>%
-  dplyr::filter(ID == the_gs_name)
-the_subtitle = paste0("\nNES : ", round(the_content$NES, 2),
-                      "\t|\tpvalue : ", round(the_content$pvalue, 4),
-                      "\t|\tset size : ", the_content$setSize, " genes")
-
-enrichplot::gseaplot2(x = list_results$cortex$gsea,
-                      geneSetID = the_gs_name) +
-  ggplot2::labs(title = the_gs_name,
-                subtitle = the_subtitle) +
-  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold",
-                                           margin = ggplot2::margin(3, 3, 5, 3)),
-                 plot.subtitle = ggtext::element_markdown(hjust = 0.5,
-                                                          size = 10))
-```
-
-Violin plot
-
-```{r fig_mat_vln_split, fig.width = 6, fig.height = 4, class.source = "fold-hide"}
-features_oi = c("KRT32")
-
-plot_list = lapply(features_oi, FUN = function(feature) {
-  feature_expr = Seurat::FetchData(sobj_mat, feature)[, 1]
-  y_max = max(feature_expr)*1.1
-  
-  # Dataframe stat
-  pop_oi = levels(sobj_mat$cluster_type)
-  
-  df_stat = lapply(c(1:length(pop_oi)), FUN = function(i) {
-    pop = pop_oi[i]
-    
-    # Stat
-    feature_hs = feature_expr[sobj_mat$sample_type == "HS" & sobj_mat$cluster_type == pop]
-    feature_hd = feature_expr[sobj_mat$sample_type == "HD" & sobj_mat$cluster_type == pop]
-    feature_hs_vs_hd = stats::t.test(feature_hs, feature_hd)
-    significance = significant(feature_hs_vs_hd$p.value)
-    
-    # Output (x, pop, signif)
-    row_i = c(i, pop, significance)
-    
-    return(row_i)
-  }) %>% do.call(rbind.data.frame, .) %>%
-    `colnames<-`(c("x", "pop", "signif")) %>%
-    dplyr::mutate(x = as.numeric(x))
-  
-  # Plot
-  p = Seurat::VlnPlot(sobj_mat, features = feature,
-                      group.by = "cluster_type",
-                      split.by = "sample_type") +
-    ggplot2::scale_fill_manual(values = sample_type_colors,
-                               breaks = names(sample_type_colors)) +
-    # Stat
-    ggplot2::geom_segment(data = df_stat, inherit.aes = FALSE, size = 0.5,
-                          mapping = aes(x = x - 0.25, xend = x + 0.25),
-                          y = y_max, yend = y_max) +
-    ggplot2::geom_label(data = df_stat, inherit.aes = FALSE,
-                        mapping = aes(x = pop, label = signif),
-                        y = y_max*1.05,
-                        fill = NA, label.size = 0) +
-    # Theme
-    ggplot2::lims(y = c(0, y_max*1.1)) +
-    ggplot2::theme(axis.title.x = element_blank(),
-                   legend.position = "right")
-  
-  return(p)
-})
-
-names(plot_list) = features_oi
-plot_list
-```
 
 # OEP002321 dataset
 
-## Settings
+## Atlas
+
+### Settings
 
 We load the dataset containing all cells :
 
@@ -2530,7 +2082,7 @@ patchwork::wrap_plots(plot_list) +
   ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 15))
 ```
 
-We define cluster type and cluster category :
+We define cluster type :
 
 ```{r cluster_type_category_wu, fig.width = 7, fig.height = 5}
 sobj$cell_type = sobj$cell_type %>%
@@ -2547,13 +2099,10 @@ sobj$cluster_type = cluster_type[sobj$seurat_clusters]
 sobj$cluster_type = factor(sobj$cluster_type,
                            levels = levels(sobj$cell_type)) %>%
   base::droplevels()
-sobj$cluster_category = custom_order_cell_type[sobj$cluster_type, "cell_category"]
-sobj$cluster_category = factor(sobj$cluster_category,
-                               levels = names(category_color))
 ```
 
 
-## Global figures
+### Global figures
 
 Project name :
 
@@ -2684,7 +2233,9 @@ plot_list = patchwork::wrap_plots(p, plot_list,
 plot_list
 ```
 
-## ORS and IFE basal dataset
+## ORS and IFE basal
+
+### Settings
 
 We load the ORS + IFE basal dataset :
 
@@ -2719,10 +2270,10 @@ cluster_type = setNames(nm = names(cluster_type),
 
 sobj_ors_ifeb$cluster_type = cluster_type[sobj_ors_ifeb$seurat_clusters]
 sobj_ors_ifeb$cluster_type = factor(sobj_ors_ifeb$cluster_type,
-                                  levels = c("ORS", "IFE basal"))
+                                    levels = c("ORS", "IFE basal"))
 ```
 
-## ORS + IFE basal figure
+### Figures
 
 ORS + IFE basal on the full atlas :
 
@@ -2730,8 +2281,8 @@ ORS + IFE basal on the full atlas :
 sobj$cell_bc = colnames(sobj)
 sobj_ors_ifeb$cell_bc = colnames(sobj_ors_ifeb)
 sobj$is_ors_ifeb = dplyr::left_join(sobj@meta.data[, c("cell_bc", "percent.mt")],
-                                  sobj_ors_ifeb@meta.data[, c("cell_bc", "cluster_type")],
-                                  by = "cell_bc")[, "cluster_type"]
+                                    sobj_ors_ifeb@meta.data[, c("cell_bc", "cluster_type")],
+                                    by = "cell_bc")[, "cluster_type"]
 
 Seurat::DimPlot(sobj, reduction = name2D_atlas, pt.size = 0.000001,
                 group.by = "is_ors_ifeb", order = FALSE) +
@@ -2853,6 +2404,23 @@ plot_list = lapply(c(1:length(genes)), FUN = function(gene_id) {
 
 plot_list
 ```
+
+# GSE129611 dataset
+
+## Atlas
+
+## ORS and IFE basal
+
+
+
+
+
+# Combined 3 datasets
+
+
+
+
+
 
 # Supplementary tables
 

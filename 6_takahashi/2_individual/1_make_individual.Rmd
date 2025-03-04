@@ -1,6 +1,6 @@
 ---
 params:
-  sample_name: "GSM3717034"
+  sample_name: "GSM3717038"
 title: "GSE129611 dataset"
 subtitle: "Sample `r params$sample_name`"
 author: "Audrey"
@@ -84,11 +84,12 @@ knitr::opts_chunk$set(echo = TRUE, # display code
 The goal of this script is to generate a Seurat object for sample `r params$sample_name`.
 
 * removal of cells based on quality control metrics
-* normalization with `LogNormalize`, then doublets detection using `scran hybrid` and `scDblFinder` method (but not filtering)
 * normalization with `LogNormalize`, for only the remaining cells
 * cell cycle and cell type annotation
-* dimensionality reduction using `PCA`
-* projection using `tSNE` and `UMAP`
+* dimensionality reduction using `PCA` to obtain 50 dimensions
+* projection using `UMAP`
+
+We do not perform doublet detection in this dataset.
 
 
 ```{r library}
@@ -110,8 +111,7 @@ out_dir = "."
 We load the parameters :
 
 ```{r get_param}
-# sample_name = params$sample_name # "GSM3717034"
-sample_name = "GSM3717034"
+sample_name = params$sample_name
 ```
 
 Input count matrix is there :
@@ -201,13 +201,12 @@ mat[c(1:5), c(1:5)]
 
 In genes metadata, we add the Ensembl ID. The `sobj@assays$RNA@meta.features` dataframe contains three information :
 
-* `rownames` : gene names stored as the dimnames of the count matrix. Duplicated gene names will have a `.1` at the end of their name
 * `Ensembl_ID` : EnsemblID, as stored in the `gene_corresp` table
 * `gene_name` : gene_name, as stored in the count matrix file. Duplicated gene names will have the same name.
 
 How many genes are in common between the count matrix and the correspondence table ?
 
-```{r qc_venn_doublet, class.source = "fold-hide", fig.width = 8, fig.height = 6}
+```{r venn_gene_names, class.source = "fold-hide", fig.width = 8, fig.height = 6}
 ggvenn::ggvenn(list(count_matrix = rownames(mat),
                     annotation = gene_corresp$gene_name), 
                fill_color = c("#0073C2FF", "#EFC000FF"),
@@ -215,6 +214,7 @@ ggvenn::ggvenn(list(count_matrix = rownames(mat),
   ggplot2::ggtitle(label = "Gene names") +
   ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold"))
 ```
+
 We keep the intersection :
 
 ```{r common_genes}
@@ -244,7 +244,7 @@ all.equal(gene_corresp$gene_name, rownames(mat))
 
 We create a Seurat object with the genes for which Ensembl ID are available:
 
-```{r}
+```{r create_sobj}
 sobj = Seurat::CreateSeuratObject(counts = mat,
                                   project = sample_name,
                                   assay = "RNA")
@@ -253,7 +253,7 @@ sobj
 
 We add the correspondence in the Seurat object :
 
-```{r features_df}
+```{r add_gene_corresp}
 sobj@assays$RNA@meta.features = gene_corresp
 rm(gene_corresp)
 
@@ -291,28 +291,27 @@ sobj
 
 ## Projection
 
-We generate a tSNE to visualize cells before filtering.
+We generate a UMAP to visualize cells before filtering.
 
 ```{r pca_before, fig.width = 12, fig.height = 4}
 sobj = aquarius::dimensions_reduction(sobj = sobj,
                                       assay = "RNA",
                                       reduction = "pca",
-                                      max_dims = 100,
+                                      max_dims = 50,
                                       verbose = FALSE)
-Seurat::ElbowPlot(sobj, ndims = 100, reduction = "RNA_pca")
+Seurat::ElbowPlot(sobj, ndims = 50, reduction = "RNA_pca")
 ```
 
 
-We generate a tSNE with 20 principal components :
+We generate a UMAP with 20 principal components :
 
-```{r tsne_before}
+```{r umap_before}
 ndims = 20
-sobj = Seurat::RunTSNE(sobj,
+sobj = Seurat::RunUMAP(sobj,
                        reduction = "RNA_pca",
                        dims = 1:ndims,
                        seed.use = 1337L,
-                       reduction.name = paste0("RNA_pca_", ndims, "_tsne"),
-                       check_duplicates = FALSE)
+                       reduction.name = paste0("RNA_pca_", ndims, "_umap"))
 
 sobj
 ```
@@ -438,7 +437,7 @@ patchwork::wrap_plots(plot_list, nrow = 1)
 
 # Quality control
 
-In this section, we look at the number of genes expressed by each cell, the number of UMI, the percentage of mitochondrial genes expressed, and the percentage of ribosomal genes expressed. Then, without taking into account the cells expressing low number of genes or have low number of UMI, we identify doublet cells.
+In this section, we look at the number of genes expressed by each cell, the number of UMI, the percentage of mitochondrial genes expressed, and the percentage of ribosomal genes expressed.
 
 We compute four quality metrics :
 
@@ -458,63 +457,6 @@ fail_percent.rb = sobj@meta.data %>% dplyr::filter(percent.rb > cut_percent.rb) 
 fail_log_nCount_RNA = sobj@meta.data %>% dplyr::filter(log_nCount_RNA < cut_log_nCount_RNA) %>% rownames()
 fail_nFeature_RNA = sobj@meta.data %>% dplyr::filter(nFeature_RNA < cut_nFeature_RNA) %>% rownames()
 ```
-
-
-## Doublet cells detection
-
-Without taking into account the low UMI and low number of features cells, we identify doublets.
-
-```{r fsobj}
-fsobj = subset(sobj, invert = TRUE,
-               cells = unique(c(fail_log_nCount_RNA, fail_nFeature_RNA)))
-
-fsobj
-```
-
-On this filtered dataset, we apply doublet cells detection. Just before, we run the normalization, taking into account only the remaining cells.
-
-```{r normalization_doublets}
-fsobj = Seurat::NormalizeData(fsobj,
-                              normalization.method = "LogNormalize",
-                              assay = "RNA")
-
-fsobj = Seurat::FindVariableFeatures(fsobj,
-                                     assay = "RNA",
-                                     nfeatures = 3000)
-fsobj
-```
-
-We identify doublet cells :
-
-```{r doublet_detection, time_it = TRUE}
-fsobj = aquarius::find_doublets(sobj = fsobj,
-                                BPPARAM = cl)
-
-fail_doublets_consensus = Seurat::WhichCells(fsobj, expression = doublets_consensus.class)
-fail_doublets_scDblFinder = Seurat::WhichCells(fsobj, expression = scDblFinder.class)
-fail_doublets_hybrid = Seurat::WhichCells(fsobj, expression = hybrid_score.class)
-```
-
-We add the information in the non filtered Seurat object :
-
-```{r add_doublet_metrics}
-sobj$doublets_consensus.class = dplyr::case_when(!(colnames(sobj) %in% colnames(fsobj)) ~ NA,
-                                                 colnames(sobj) %in% fail_doublets_consensus ~ TRUE,
-                                                 !(colnames(sobj) %in% fail_doublets_consensus) ~ FALSE)
-
-sobj$scDblFinder.class = dplyr::case_when(!(colnames(sobj) %in% colnames(fsobj)) ~ NA,
-                                          colnames(sobj) %in% fail_doublets_scDblFinder ~ TRUE,
-                                          !(colnames(sobj) %in% fail_doublets_scDblFinder) ~ FALSE)
-
-sobj$hybrid_score.class = dplyr::case_when(!(colnames(sobj) %in% colnames(fsobj)) ~ NA,
-                                           colnames(sobj) %in% fail_doublets_hybrid ~ TRUE,
-                                           !(colnames(sobj) %in% fail_doublets_hybrid) ~ FALSE)
-```
-
-```{r clean_fsobj, echo = FALSE}
-rm(fsobj)
-```
-
 
 ## Quality control representation
 
@@ -686,7 +628,7 @@ Seurat::DimPlot(sobj, group.by = "fail", na.value = "gray80", cols = color_marke
 
 ### FACS-like figure
 
-We would like to see if the number of feature expressed by cell, and the number of UMI is correlated with the cell type, the percentage of mitochondrial and ribosomal gene expressed, and the doublet status. We build the `log_nCount_RNA` by `nFeature_RNA` figure, where cells (dots) are colored by these different metrics.
+We would like to see if the number of feature expressed by cell, and the number of UMI is correlated with the cell type, the percentage of mitochondrial and ribosomal gene expressed. We build the `log_nCount_RNA` by `nFeature_RNA` figure, where cells (dots) are colored by these different metrics.
 
 This is the figure, colored by cell type :
 
@@ -725,48 +667,6 @@ aquarius::plot_qc_facslike(df = sobj@meta.data,
                            bins = 200)
 ```
 
-This is the figure, colored by the doublet cells status (`doublets_consensus.class`) :
-
-```{r qc_patchwork_doublet_consensus, class.source = "fold-hide", fig.width = 10, fig.height = 8}
-aquarius::plot_qc_facslike(df = sobj@meta.data,
-                           x = "nFeature_RNA",
-                           y = "log_nCount_RNA",
-                           col_by = "doublets_consensus.class",
-                           col_colors = setNames(nm = c(TRUE, FALSE),
-                                                 aquarius::gg_color_hue(2)),
-                           x_thresh = cut_nFeature_RNA,
-                           y_thresh = cut_log_nCount_RNA,
-                           bins = 200)
-```
-
-This is the figure, colored by the doublet cells status (`scDblFinder.class`) :
-
-```{r qc_patchwork_scdblfinder, class.source = "fold-hide", fig.width = 10, fig.height = 8}
-aquarius::plot_qc_facslike(df = sobj@meta.data,
-                           x = "nFeature_RNA",
-                           y = "log_nCount_RNA",
-                           col_by = "scDblFinder.class",
-                           col_colors = setNames(nm = c(TRUE, FALSE),
-                                                 aquarius::gg_color_hue(2)),
-                           x_thresh = cut_nFeature_RNA,
-                           y_thresh = cut_log_nCount_RNA,
-                           bins = 200)
-```
-
-This is the figure, colored by the doublet cells status (`hybrid_score.class`) :
-
-```{r qc_patchwork_hybrid_score, class.source = "fold-hide", fig.width = 10, fig.height = 8}
-aquarius::plot_qc_facslike(df = sobj@meta.data,
-                           x = "nFeature_RNA",
-                           y = "log_nCount_RNA",
-                           col_by = "hybrid_score.class",
-                           col_colors = setNames(nm = c(TRUE, FALSE),
-                                                 aquarius::gg_color_hue(2)),
-                           x_thresh = cut_nFeature_RNA,
-                           y_thresh = cut_log_nCount_RNA,
-                           bins = 200)
-```
-
 
 ### Visualization as piechart
 
@@ -793,22 +693,8 @@ if (nrow(df) == 0) {
                    plot.subtitle = element_text(hjust = 0.5))
 }
 
-## Doublets consensus
-df = sobj@meta.data %>%
-  dplyr::filter(doublets_consensus.class)
-if (nrow(df) == 0) {
-  plot_list[[2]] = ggplot()
-} else {
-  plot_list[[2]] = aquarius::plot_piechart(df = df,
-                                           logical_var = "all_cells",
-                                           grouping_var = "cell_type",
-                                           colors = color_markers,
-                                           display_legend = TRUE) +
-    ggplot2::labs(title = "doublets_consensus.class",
-                  subtitle = paste(sum(sobj$doublets_consensus.class, na.rm = TRUE), "cells")) +
-    ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold"),
-                   plot.subtitle = element_text(hjust = 0.5))
-}
+## Doublet cells: not done
+plot_list[[2]] = ggplot()
 
 ## percent.mt
 df = sobj@meta.data %>%
@@ -889,59 +775,6 @@ sobj$all_cells = NULL
 rm(plot_list, df)
 ```
 
-
-### Doublet cells status
-
-We can compare doublet detection methods with a Venn diagram : 
-
-```{r qc_venn_doublet, class.source = "fold-hide", fig.width = 8, fig.height = 6}
-ggvenn::ggvenn(list(hybrid = fail_doublets_hybrid,
-                    scDblFinder = fail_doublets_scDblFinder), 
-               fill_color = c("#0073C2FF", "#EFC000FF"),
-               stroke_size = 0.5, set_name_size = 4) +
-  ggplot2::ggtitle(label = "Doublet cells") +
-  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold"))
-```
-
-We visualize cells annotation for doublets :
-
-```{r doublets_proj, fig.width = 12, fig.height = 6, class.source = "fold-hide"}
-plot_list = list()
-
-# scDblFinder.class
-sobj$fail = ifelse(sobj$scDblFinder.class,
-                   yes = as.character(sobj$cell_type), no = NA)
-sobj$fail = factor(sobj$fail, levels = c(levels(sobj$cell_type), NA))
-
-plot_list[[1]] = Seurat::DimPlot(sobj, group.by = "fail",
-                                 na.value = "gray80", cols = color_markers) +
-  ggplot2::labs(title = "scDblFinder.class",
-                subtitle = paste0(sum(sobj$scDblFinder.class, na.rm = TRUE), " cells")) +
-  Seurat::NoAxes() + Seurat::NoLegend() +
-  ggplot2::theme(aspect.ratio = 1,
-                 plot.title = element_text(hjust = 0.5),
-                 plot.subtitle = element_text(hjust = 0.5))
-
-# hybrid_score.class
-sobj$fail = ifelse(sobj$hybrid_score.class,
-                   yes = as.character(sobj$cell_type), no = NA)
-sobj$fail = factor(sobj$fail, levels = c(levels(sobj$cell_type), NA))
-
-plot_list[[2]] = Seurat::DimPlot(sobj, group.by = "fail",
-                                 na.value = "gray80", cols = color_markers) +
-  ggplot2::labs(title = "hybrid_score.class",
-                subtitle = paste0(sum(sobj$hybrid_score.class, na.rm = TRUE), " cells")) +
-  Seurat::NoAxes() +
-  ggplot2::theme(aspect.ratio = 1,
-                 plot.title = element_text(hjust = 0.5),
-                 plot.subtitle = element_text(hjust = 0.5))
-
-sobj$fail = NULL
-
-# Plot
-patchwork::wrap_plots(plot_list, nrow = 1)
-```
-
 ## Save
 
 We could save this object before filtering (remove `eval = FALSE`) :
@@ -970,8 +803,7 @@ sobj
 ```
 
 ```{r clean_filter, echo = FALSE}
-rm(fail_doublets_consensus, fail_doublets_scDblFinder, fail_doublets_hybrid,
-   fail_percent.mt, fail_percent.rb, fail_log_nCount_RNA, fail_nFeature_RNA,
+rm(fail_percent.mt, fail_percent.rb, fail_log_nCount_RNA, fail_nFeature_RNA,
    cut_percent.mt, cut_percent.rb, cut_log_nCount_RNA, cut_nFeature_RNA)
 ```
 
@@ -1001,23 +833,16 @@ We perform a PCA :
 sobj = aquarius::dimensions_reduction(sobj = sobj,
                                       assay = "RNA",
                                       reduction = "pca",
-                                      max_dims = 100,
+                                      max_dims = 50,
                                       verbose = FALSE)
-Seurat::ElbowPlot(sobj, ndims = 100, reduction = "RNA_pca")
+Seurat::ElbowPlot(sobj, ndims = 50, reduction = "RNA_pca")
 ```
 
 
-We generate a tSNE and a UMAP with 20 principal components :
+We generate a UMAP with 20 principal components :
 
-```{r tsne_umap}
+```{r umap}
 ndims = 20
-sobj = Seurat::RunTSNE(sobj,
-                       reduction = "RNA_pca",
-                       dims = 1:ndims,
-                       seed.use = 1337L,
-                       reduction.name = paste0("RNA_pca_", ndims, "_tsne"),
-                       check_duplicates = FALSE)
-
 sobj = Seurat::RunUMAP(sobj,
                        reduction = "RNA_pca",
                        dims = 1:ndims,
@@ -1097,7 +922,7 @@ plot_list[[2]] = aquarius::plot_barplot(df = df_proportion,
                       label.size = 0)
 
 plot_list[[1]] = Seurat::DimPlot(sobj, group.by = "cell_type",
-                                 reduction = "RNA_pca_20_tsne") +
+                                 reduction = "RNA_pca_20_umap") +
   ggplot2::scale_color_manual(values = unlist(color_markers),
                               breaks = names(color_markers)) +
   ggplot2::labs(title = sample_name,
@@ -1134,7 +959,7 @@ We visualize cell cycle on the projection :
 plot_list = list()
 
 plot_list[[2]] = Seurat::DimPlot(sobj, group.by = "Seurat.Phase",
-                                 reduction = "RNA_pca_20_tsne") +
+                                 reduction = "RNA_pca_20_umap") +
   ggplot2::labs(title = "Cell Cycle Phase",
                 subtitle = "Seurat.Phase") +
   Seurat::NoLegend() + Seurat::NoAxes() +
@@ -1143,7 +968,7 @@ plot_list[[2]] = Seurat::DimPlot(sobj, group.by = "Seurat.Phase",
                  plot.subtitle = element_text(hjust = 0.5))
 
 plot_list[[1]] = Seurat::DimPlot(sobj, group.by = "cyclone.Phase",
-                                 reduction = "RNA_pca_20_tsne") +
+                                 reduction = "RNA_pca_20_umap") +
   ggplot2::labs(title = "Cell Cycle Phase",
                 subtitle = "cyclone.Phase") +
   Seurat::NoLegend() + Seurat::NoAxes() +
@@ -1173,62 +998,35 @@ table(sobj$seurat_clusters)
 
 We can visualize the cell type :
 
-```{r see_cell_type, fig.width = 12, fig.height = 6, class.source = "fold-hide"}
-tsne = Seurat::DimPlot(sobj, group.by = "cell_type",
-                       reduction = paste0("RNA_pca_", ndims, "_tsne"), cols = color_markers) +
-  Seurat::NoAxes() + ggplot2::ggtitle("tSNE") +
-  ggplot2::theme(aspect.ratio = 1,
-                 plot.title = element_text(hjust = 0.5),
-                 legend.position = "none")
-
-umap = Seurat::DimPlot(sobj, group.by = "cell_type",
-                       reduction = paste0("RNA_pca_", ndims, "_umap"), cols = color_markers) +
+```{r see_cell_type, fig.width = 7, fig.height = 6, class.source = "fold-hide"}
+Seurat::DimPlot(sobj, group.by = "cell_type",
+                reduction = paste0("RNA_pca_", ndims, "_umap"), cols = color_markers) +
   Seurat::NoAxes() + ggplot2::ggtitle("UMAP") +
   ggplot2::theme(aspect.ratio = 1,
                  plot.title = element_text(hjust = 0.5))
-
-tsne | umap
 ```
 
 ## Cell cycle
 
 We can visualize the cell cycle, from Seurat :
 
-```{r see_cc_Seurat, fig.width = 12, fig.height = 6, class.source = "fold-hide"}
-tsne = Seurat::DimPlot(sobj, group.by = "Seurat.Phase",
-                       reduction = paste0("RNA_pca_", ndims, "_tsne")) +
-  Seurat::NoAxes() + ggplot2::ggtitle("tSNE") +
-  ggplot2::theme(aspect.ratio = 1,
-                 plot.title = element_text(hjust = 0.5),
-                 legend.position = "none")
-
-umap = Seurat::DimPlot(sobj, group.by = "Seurat.Phase",
-                       reduction = paste0("RNA_pca_", ndims, "_umap")) +
+```{r see_cc_Seurat, fig.width = 7, fig.height = 6, class.source = "fold-hide"}
+Seurat::DimPlot(sobj, group.by = "Seurat.Phase",
+                reduction = paste0("RNA_pca_", ndims, "_umap")) +
   Seurat::NoAxes() + ggplot2::ggtitle("UMAP") +
   ggplot2::theme(aspect.ratio = 1,
                  plot.title = element_text(hjust = 0.5))
-
-tsne | umap
 ```
 
 
 We can visualize the cell cycle, from cyclone :
 
-```{r see_cc_cyclone, fig.width = 12, fig.height = 6, class.source = "fold-hide"}
-tsne = Seurat::DimPlot(sobj, group.by = "cyclone.Phase",
-                       reduction = paste0("RNA_pca_", ndims, "_tsne")) +
-  Seurat::NoAxes() + ggplot2::ggtitle("tSNE") +
-  ggplot2::theme(aspect.ratio = 1,
-                 plot.title = element_text(hjust = 0.5),
-                 legend.position = "none")
-
-umap = Seurat::DimPlot(sobj, group.by = "cyclone.Phase",
-                       reduction = paste0("RNA_pca_", ndims, "_umap")) +
+```{r see_cc_cyclone, fig.width = 7, fig.height = 6, class.source = "fold-hide"}
+Seurat::DimPlot(sobj, group.by = "cyclone.Phase",
+                reduction = paste0("RNA_pca_", ndims, "_umap")) +
   Seurat::NoAxes() + ggplot2::ggtitle("UMAP") +
   ggplot2::theme(aspect.ratio = 1,
                  plot.title = element_text(hjust = 0.5))
-
-tsne | umap
 ```
 
 
@@ -1236,27 +1034,18 @@ tsne | umap
 
 We visualize the clustering :
 
-```{r see_clusters, fig.width = 12, fig.height = 6, class.source = "fold-hide"}
-tsne = Seurat::DimPlot(sobj, group.by = "seurat_clusters", label = TRUE,
-                       reduction = paste0("RNA_pca_", ndims, "_tsne")) +
-  Seurat::NoAxes() + ggplot2::ggtitle("tSNE") +
-  ggplot2::theme(aspect.ratio = 1,
-                 plot.title = element_text(hjust = 0.5),
-                 legend.position = "none")
-
-umap = Seurat::DimPlot(sobj, group.by = "seurat_clusters", label = TRUE,
-                       reduction = paste0("RNA_pca_", ndims, "_umap")) +
+```{r see_clusters, fig.width = 7, fig.height = 6, class.source = "fold-hide"}
+Seurat::DimPlot(sobj, group.by = "seurat_clusters", label = TRUE,
+                reduction = paste0("RNA_pca_", ndims, "_umap")) +
   Seurat::NoAxes() + ggplot2::ggtitle("UMAP") +
   ggplot2::theme(aspect.ratio = 1,
                  plot.title = element_text(hjust = 0.5))
-
-tsne | umap
 ```
 
 
 ## Gene expression
 
-We visualize all cell types markers on the tSNE :
+We visualize all cell types markers on the UMAP :
 
 ```{r plot_genes, fig.width = 12, fig.height = 20}
 markers = dotplot_markers %>% unlist() %>% unname()
@@ -1265,7 +1054,7 @@ markers = markers[markers %in% rownames(sobj)]
 plot_list = lapply(markers,
                    FUN = function(one_gene) {
                      p = Seurat::FeaturePlot(sobj, features = one_gene,
-                                             reduction = paste0("RNA_pca_", ndims, "_tsne")) +
+                                             reduction = paste0("RNA_pca_", ndims, "_umap")) +
                        ggplot2::labs(title = one_gene) +
                        ggplot2::scale_color_gradientn(colors = aquarius::color_gene) +
                        ggplot2::theme(aspect.ratio = 1,

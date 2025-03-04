@@ -1,6 +1,6 @@
 ---
 title: "HS project"
-subtitle: "Combined dataset (us + Wu + Takahashi)"
+subtitle: "Combined dataset (our + Wu + Takahashi)"
 author: "Audrey"
 date: "`r format(Sys.time(), '%Y-%m-%d')`"
 output:
@@ -93,7 +93,6 @@ library(dplyr)
 library(patchwork)
 library(ggplot2)
 library(ComplexHeatmap)
-library(org.Hs.eg.db) # not in the Singularity container :(
 
 .libPaths()
 ```
@@ -227,6 +226,10 @@ plot_list = lapply(sobj_list, FUN = function(one_sobj) {
   mytitle = as.character(unique(one_sobj$project_name))
   mysubtitle = ncol(one_sobj)
   
+  if (!(name2D %in% names(one_sobj@reductions))) {
+    name2D = names(one_sobj@reductions)[2]
+  }
+  
   p = Seurat::DimPlot(one_sobj, group.by = "cell_type",
                       reduction = name2D) +
     ggplot2::scale_color_manual(values = color_markers,
@@ -258,6 +261,10 @@ plot_list = lapply(sobj_list, FUN = function(one_sobj) {
   mytitle = as.character(unique(one_sobj$project_name))
   mysubtitle = ncol(one_sobj)
   
+  if (!(name2D %in% names(one_sobj@reductions))) {
+    name2D = names(one_sobj@reductions)[2]
+  }
+  
   p = Seurat::DimPlot(one_sobj, group.by = "seurat_clusters",
                       reduction = name2D, label = TRUE) +
     ggplot2::labs(title = mytitle,
@@ -273,7 +280,7 @@ plot_list = lapply(sobj_list, FUN = function(one_sobj) {
 patchwork::wrap_plots(plot_list, ncol = 4)
 ```
 
-## Melanocytes remomal
+## Melanocytes removal
 
 For each individual dataset, we remove melanocytes. First, we smooth cell type annotation at a cluster level :
 
@@ -298,6 +305,10 @@ To locate melanocytes, we look at their score, cell type annotation, and cluster
 plot_list = lapply(sobj_list, FUN = function(one_sobj) {
   project_name = as.character(unique(one_sobj$project_name))
   plot_sublist = list()
+  
+  if (!(name2D %in% names(one_sobj@reductions))) {
+    name2D = names(one_sobj@reductions)[2]
+  }
   
   # Score
   plot_sublist[[1]] = Seurat::FeaturePlot(one_sobj, reduction = name2D,
@@ -355,11 +366,15 @@ plot_list = lapply(sobj_list, FUN = function(one_sobj) {
 patchwork::wrap_plots(plot_list, ncol = 4)
 ```
 
-We remove melanocytes based on cluster annotation :
+We remove melanocytes based on cluster annotation for 10X datasets and based on the cell type annotation for Drop-Seq datasets :
 
 ```{r remove_melanocytes}
 sobj_list = lapply(sobj_list, FUN = function(one_sobj) {
-  one_sobj$is_of_interest = (one_sobj$cluster_type != "melanocytes")
+  if (one_sobj@project.name %in% c("GSM3717034", "GSM3717035", "GSM3717036")) {
+    one_sobj$is_of_interest = (one_sobj$cell_type != "melanocytes")
+  } else {
+    one_sobj$is_of_interest = (one_sobj$cluster_type != "melanocytes")
+  }
   
   if (sum(one_sobj$is_of_interest) > 0) {
     one_sobj = subset(one_sobj, is_of_interest == TRUE)
@@ -386,7 +401,7 @@ color_markers = color_markers[names(color_markers) != "melanocytes"]
 dotplot_markers = dotplot_markers[names(dotplot_markers) != "melanocytes"]
 ```
 
-We re-annote cells for cell type, since melanocytes have been removed :
+We re-annotate cells for cell type, since melanocytes have been removed :
 
 ```{r re_annot}
 sobj_list = lapply(sobj_list, FUN = function(one_sobj) {
@@ -408,289 +423,151 @@ sobj_list = lapply(sobj_list, FUN = function(one_sobj) {
 })
 ```
 
-## Combined dataset
+## Gene annotation
 
-### Gene names homogenization
+Our dataset and Wu dataset were processed using the same annotation. In Takahashi dataset, all genes are not shared across datasets:
 
-To which extent gene names are common between all datasets ?
+Note: With the `ggvenn` package, this is not possible to make a Venn diagram with 5 sets.
 
-```{r common_genes_upset, fig.width = 12, fig.height = 8}
-gene_names = lapply(sobj_list, FUN = rownames)
-obj_upset = ComplexHeatmap::make_comb_mat(gene_names, mode = "distinct")
-ComplexHeatmap::UpSet(obj_upset)
+```{r ggvenn_ds_10x, fig.width = 8, fig.height = 8}
+ggvenn::ggvenn(data = list(
+  here.2021_31 = sobj_list[["here.2021_31"]]@assays[["RNA"]]@meta.features$Ensembl_ID,
+  wu.F18 = sobj_list[["wu.F18"]]@assays[["RNA"]]@meta.features$Ensembl_ID,
+  takahashi.GSM3717034 = sobj_list[["takahashi.GSM3717034"]]@assays[["RNA"]]@meta.features$Ensembl_ID,
+  takahashi.GSM3717038 = sobj_list[["takahashi.GSM3717038"]]@assays[["RNA"]]@meta.features$Ensembl_ID),
+  stroke_size = 0.5, set_name_size = 4) +
+  ggplot2::labs(title = "Gene Ensembl IDs between the 4 datasets") +
+  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold"))
 ```
 
-For our data and Wu data, we have the correspondence between gene names and Ensembl IDs. For Takahashi data, we try to find them using `bitr` function from `clusterProfiler` package.
+We keep common genes between all datasets + common genes between the 10X datasets, based on the EnsemblID
 
-
-```{r correspondence, time_it = TRUE}
-annotation = clusterProfiler::bitr(
-  geneID   = unique(unlist(gene_names)),
-  fromType = "SYMBOL",
-  toType   = "ENSEMBL",
-  OrgDb    = org.Hs.eg.db,
-  drop = FALSE)
-
-head(annotation)
-```
-
-There is a lot of NA. Given that our data and Wu data were mapped using the same annotation, we complete the annotation table using the Ensembl ID we stored in each individual Seurat objects:
-
-```{r complete_our}
-annotation = dplyr::left_join(
-  x = annotation,
-  y = sobj_list[["here.2021_31"]]@assays[["RNA"]]@meta.features[, c("Ensembl_ID", "gene_name")],
-  by = c("SYMBOL" = "gene_name"))
-
-head(annotation)
-```
-
-There is still a lot of data. We try to complete the dataframe using the `biomaRt` package:
-
-```{r complete_biomart, time_it = TRUE}
-httr::set_config(httr::config(ssl_verifypeer = FALSE))
-mart = biomaRt::useEnsembl(biomart = "ensembl",
-                           dataset = "hsapiens_gene_ensembl")
-corresp = biomaRt::getBM(attributes = c("ensembl_gene_id", "hgnc_symbol"),
-                         filters = "hgnc_symbol",
-                         values = unique(unlist(gene_names)),
-                         mart = mart)
-
-head(corresp)
-```
-
-We merge this information with the `annotation` table:
-
-```{r complete_corresp}
-annotation = dplyr::left_join(
-  x = annotation,
-  y = corresp,
-  by = c("SYMBOL" = "hgnc_symbol"))
-
-head(annotation)
-```
-
-We merge the two Ensembl columns:
-
-```{r final_annotatio}
-annotation = annotation %>%
-  dplyr::mutate(ENSEMBL_ID = ifelse(
-    !is.na(ENSEMBL),
-    yes = as.character(ENSEMBL),
-    no = ifelse(!is.na(ensembl_gene_id),
-                yes = as.character(ensembl_gene_id),
-                no = as.character(Ensembl_ID)))) %>%
-  dplyr::select(SYMBOL, ENSEMBL_ID) %>%
-  unique()
-
-head(annotation)
-```
-
-How many NA data are remaining ?
-
-```{r table_na}
-table(is.na(annotation$ENSEMBL_ID))
-```
-
-For which dataset Ensembl IDs are not available ?
-
-```{r genes_without_ensembl}
-genes_without_ensembl = annotation %>%
-  dplyr::filter(is.na(ENSEMBL_ID)) %>%
-  dplyr::pull(SYMBOL)
-
-lapply(gene_names, FUN = function(sample_genes) {
-  return(table(sample_genes %in% genes_without_ensembl))
-}) %>% do.call(rbind, .) %>%
-  `colnames<-`(c("ID available", "ID not available"))
-```
-
-The fact that 20 ID are not available in our data and Wu data is due to genes sharing the same Ensembl ID... We will still keep all the genes available in these two sets of data. The goal here is to find a correspondence between gene names from Takahashi data and from our and Wu data, passing by Ensembl IDs.
-
-Some genes share the same symbol but not the Ensembl ID. Since in Takahashi data, there are only symbols, we can not know the Ensembl ID to which they correspond. **We make a choice to select the first Ensembl ID available for the symbol.** For this, we select only the unique symbol in the `annotation` table.
-
-```{r dedupl_annotation}
-table(duplicated(annotation$SYMBOL))
-dim(annotation)
-
-annotation = annotation %>%
-  dplyr::filter(!duplicated(SYMBOL))
-
-dim(annotation)
-```
-
-Now, we can set symbol as row names:
-
-```{r rownames_annot}
-rownames(annotation) = annotation$SYMBOL
-
-head(annotation)
-```
-
-### Extract count matrices
-
-For each dataset, we extract the count matrices and metadata. The gene names in the count matrices will be convert to Ensembl ID, using our correspondence of Wu and our data, or the `annotation` table for Takahashi data.
-
-```{r count_matrix_list}
-our_correspondence = sobj_list[["here.2021_31"]]@assays[["RNA"]]@meta.features[, c("Ensembl_ID", "gene_name")]
-our_correspondence$no_dup_gene_names = rownames(our_correspondence)
-rownames(our_correspondence) = our_correspondence$Ensembl_ID
-
-count_matrix_list = lapply(sobj_list, FUN = function(one_sobj) {
-  project_name = unique(one_sobj$project_name)
-  count_matrix = one_sobj@assays[["RNA"]]@counts
+```{r common_genes, fig.width = 8, fig.height = 8}
+# All Ensembl IDs
+common_genes = lapply(sobj_list, FUN = function(one_sobj) {
+  ensembl_id = one_sobj@assays[["RNA"]]@meta.features$Ensembl_ID
   
-  if (project_name %in% sample_info_3$project_name) {
-    # get Ensembl ID corresponding to gene names
-    this_dataset_annot = annotation[rownames(count_matrix), ]
-    
-    # get gene names corresponding to Ensembl ID, using our correspondence (same dim)
-    this_dataset_annot = dplyr::left_join(x = this_dataset_annot,
-                                          y = our_correspondence,
-                                          by = c("ENSEMBL_ID" = "Ensembl_ID"))
-    
-    # re set old gene names if none are available using our correspondence
-    this_dataset_annot = this_dataset_annot %>%
-      dplyr::mutate(no_dup_gene_names = ifelse(is.na(no_dup_gene_names),
-                                               yes = SYMBOL,
-                                               no = no_dup_gene_names))
-    rownames(this_dataset_annot) = this_dataset_annot$SYMBOL # all in the count matrices
-    
-    # convert the row names of the count matrix
-    rownames(count_matrix) = this_dataset_annot[rownames(count_matrix), "no_dup_gene_names"]
-  }
-  
-  return(count_matrix)
+  return(ensembl_id)
 })
+names(common_genes) = names(sobj_list)
 
-lapply(count_matrix_list, FUN = dim) %>%
-  do.call(rbind, .) %>%
-  `colnames<-`(c("Nb genes", "Nb cells"))
+# Common between 10X datasets
+common_genes_10x = common_genes[!(names(common_genes) %in% c("takahashi.GSM3717034",
+                                                             "takahashi.GSM3717035",
+                                                             "takahashi.GSM3717036"))] %>%
+  Reduce(intersect, .)
+
+# Common between all
+common_genes = Reduce(intersect, common_genes)
+
+# Venn diagram
+ggvenn::ggvenn(data = list(
+  common_all = common_genes,
+  common_10X = common_genes_10x),
+  stroke_size = 0.5, set_name_size = 4) +
+  ggplot2::labs(title = "Gene Ensembl IDs") +
+  ggplot2::theme(plot.title = element_text(hjust = 0.5, face = "bold"))
 ```
 
-What is the aspect of the new upset plot ?
+We keep the union of all these genes :
 
-```{r common_genes_upset2, fig.width = 12, fig.height = 8}
-gene_names = lapply(count_matrix_list, FUN = rownames)
-obj_upset = ComplexHeatmap::make_comb_mat(gene_names, mode = "distinct")
-ComplexHeatmap::UpSet(obj_upset)
-```
-
-It almost did not change anything... Indeed:
-
-```{r check_sadness}
-table(rownames(sobj_list$takahashi.GSM3717037) %in% rownames(count_matrix_list$takahashi.GSM3717037))
-```
-
-So for the final dataset, we will extract only the common genes between all datasets. It corresponds to the first column in tne upset plot.
-
-```{r common_genes}
-common_genes = Reduce(x = lapply(count_matrix_list, FUN = rownames),
-                      f = intersect)
+```{r common_genes_union}
+common_genes = union(common_genes, common_genes_10x)
+rm(common_genes_10x)
 
 length(common_genes)
 ```
 
-We subset all datasets to keep only these genes :
+To which gene names they correspond, in one of our dataset ?
 
-```{r subset_object}
-count_matrix_list = lapply(count_matrix_list, FUN = function(one_count_matrix) {
-  one_count_matrix = one_count_matrix[common_genes, ]
+```{r gene_corresp}
+gene_corresp = sobj_list[["here.2021_31"]]@assays$RNA@meta.features %>%
+  dplyr::filter(Ensembl_ID %in% common_genes) %>%
+  dplyr::select(Ensembl_ID, gene_name)
+
+dim(gene_corresp)
+head(gene_corresp)
+```
+
+We subset Seurat object for the Ensembl IDs of interest.
+
+```{r subset_genes}
+sobj_list = lapply(sobj_list, FUN = function(one_sobj) {
+  # Extract metadata
+  one_metadata = one_sobj@meta.data
   
-  return(one_count_matrix)
+  # Extract and subset gene annotation
+  one_annotation = one_sobj@assays[["RNA"]]@meta.features %>%
+    dplyr::filter(Ensembl_ID %in% gene_corresp$Ensembl_ID)
+  
+  # Subset gene corresp for reordering
+  one_gene_corresp = gene_corresp %>%
+    dplyr::filter(Ensembl_ID %in% one_annotation$Ensembl_ID)
+  
+  # Extract count matrix and subset genes
+  one_count_matrix = one_sobj@assays[["RNA"]]@counts
+  one_count_matrix = one_count_matrix[rownames(one_annotation), ]
+  
+  # Reorder according to the gene correspondence
+  gene_order = match(one_gene_corresp$Ensembl_ID,
+                     one_annotation$Ensembl_ID)
+  
+  # Reorder the count matrix and annotation
+  one_annotation = one_annotation[gene_order, ]
+  one_count_matrix = one_count_matrix[gene_order, ]
+  rownames(one_count_matrix) = rownames(one_gene_corresp)
+  
+  # Build again the Seurat object
+  one_sobj = Seurat::CreateSeuratObject(counts = one_count_matrix,
+                                        meta.data = one_metadata)
+  one_sobj@assays[["RNA"]]@meta.features = one_gene_corresp
+  
+  return(one_sobj)
 })
 
-lapply(count_matrix_list, FUN = dim) %>%
+lapply(sobj_list, FUN = dim) %>%
   do.call(rbind, .) %>%
-  `colnames<-`(c("Nb genes", "Nb cells"))
+  rbind(., colSums(.))
 ```
 
-To merge all the count matrices, we add a prefix to each cell to avoid duplicated cell barcodes. The prefix is:
+## Combined dataset
 
-```{r prefix}
-names(count_matrix_list) = names(count_matrix_list) %>%
-  stringr::str_split(string = .,
-                     pattern = "\\.") %>%
-  lapply(., `[[`, 2) %>%
-  unlist()
-names(sobj_list) = names(count_matrix_list)
+We combine all datasets :
 
-names(count_matrix_list)
-```
-
-We add the prefix for each count matrix and merge them:
-
-```{r count_matrix_merge}
-count_matrix_merge = lapply(names(count_matrix_list), FUN = function(one_project_name) {
-  one_count_matrix = count_matrix_list[[one_project_name]]
-  colnames(one_count_matrix) = paste0(one_project_name, "_", colnames(one_count_matrix))
-  
-  return(one_count_matrix)
-}) %>% do.call(cbind.data.frame, .)
-
-dim(count_matrix_merge)
-count_matrix_merge[c(1:3), c(1:3)]
-```
-
-### Extract metadata
-
-Similarly, we build a big metadata table:
-
-```{r make_big_metadata}
-columns_of_interest = c("orig.ident", "nCount_RNA", "nFeature_RNA", "log_nCount_RNA",
-                        "project_name", "sample_identifier", "sample_type",
-                        "laboratory", "location", "Seurat.Phase", "cyclone.Phase",
-                        "percent.mt", "percent.rb", "cell_type")
-
-metadata_merge = lapply(names(sobj_list), FUN = function(one_project_name) {
-  one_sobj = sobj_list[[one_project_name]]
-  metadata = one_sobj@meta.data
-  rownames(metadata) = paste0(one_project_name, "_", rownames(metadata))
-  metadata = metadata[, columns_of_interest]
-  
-  return(metadata)
-}) %>% do.call(rbind.data.frame, .)
-
-dim(metadata_merge)
-head(metadata_merge)
-```
-
-### Combined dataset
-
-We generate a new Seurat object from the count matrix and the metadata:
-
-```{r combined_dataset}
-dim(count_matrix_merge)
-dim(metadata_merge)
-all.equal(rownames(metadata_merge), colnames(count_matrix_merge))
-
-sobj = Seurat::CreateSeuratObject(counts = count_matrix_merge,
-                                  meta.data = metadata_merge)
+```{r merge_datasets}
+sobj = base::merge(sobj_list[[1]],
+                   y = sobj_list[c(2:length(sobj_list))],
+                   add.cell.ids = names(sobj_list))
 sobj
 ```
 
-We add the correspondence between gene names and gene ID.
+We add again the correspondence between gene names and gene ID. We take the correspondence from one individual 10X dataset.
 
 ```{r add_metafeatures}
-sobj@assays$RNA@meta.features = annotation[common_genes, ]
+sobj@assays$RNA@meta.features = sobj_list[[1]]@assays$RNA@meta.features[, c("Ensembl_ID", "gene_name")]
 
 head(sobj@assays$RNA@meta.features)
 ```
 
-We remove what we will not use :
+We remove the list of objects :
 
 ```{r clean_sobj_list}
-rm(sobj_list, annotation, corresp, our_correspondence, obj_upset,
-   gene_names, mart, plot_list,
-   sample_info_1, sample_info_2, sample_info_3, column_to_keep,
-   count_matrix_merge, count_matrix_list, metadata_merge,
-   column_to_keep, common_genes, columns_of_interest)
+rm(sobj_list)
 ```
 
 We keep a subset of meta.data and reset levels :
 
 ```{r sobj_set_factor_levels}
+sobj@meta.data = sobj@meta.data[, c("orig.ident", "nCount_RNA", "nFeature_RNA", "log_nCount_RNA",
+                                    "project_name", "sample_identifier", "sample_type",
+                                    "laboratory", "location", "Seurat.Phase", "cyclone.Phase",
+                                    "percent.mt", "percent.rb", "cell_type")]
+
+sobj$orig.ident = factor(sobj$orig.ident, levels = levels(sample_info$project_name))
 sobj$project_name = factor(sobj$project_name, levels = levels(sample_info$project_name))
+sobj$sample_identifier = factor(sobj$sample_identifier, levels = levels(sample_info$sample_identifier))
+sobj$sample_type = factor(sobj$sample_type, levels = unique(sample_info$sample_type))
+sobj$cell_type = factor(sobj$cell_type, levels = names(color_markers))
 
 summary(sobj@meta.data)
 ```
@@ -701,13 +578,6 @@ We remove genes that are expressed in less than 5 cells :
 
 ```{r filter_genes}
 sobj = aquarius::filter_features(sobj, min_cells = 5)
-sobj
-```
-
-We remove cells expressing less than 200 genes.
-
-```{r filter_cells}
-sobj = subset(sobj, nFeature_RNA > 250)
 sobj
 ```
 
@@ -918,7 +788,7 @@ We generate a clustering :
 
 ```{r clustering, fig.width = 6, fig.height = 6}
 sobj = Seurat::FindNeighbors(sobj, reduction = reduction, dims = 1:ndims)
-sobj = Seurat::FindClusters(sobj, resolution = 1.5)
+sobj = Seurat::FindClusters(sobj, resolution = 1.2)
 
 clusters_plot = Seurat::DimPlot(sobj, reduction = name2D, label = TRUE) +
   Seurat::NoAxes() + Seurat::NoLegend() +
@@ -947,28 +817,6 @@ plot_list = lapply(plot_list, FUN = function(one_plot) {
 patchwork::wrap_plots(plot_list, nrow = 1)
 ```
 
-
-## Clusters
-
-We can represent clusters, split by sample of origin :
-
-```{r plot_split_dimred_cluster, fig.width = 14, fig.height = 20}
-plot_list = aquarius::plot_split_dimred(sobj,
-                                        reduction = name2D,
-                                        split_by = "project_name",
-                                        group_by = "seurat_clusters",
-                                        split_color = setNames(sample_info$color,
-                                                               nm = sample_info$project_name),
-                                        group_color = aquarius::gg_color_hue(length(levels(sobj$seurat_clusters))))
-
-plot_list[[length(plot_list) + 1]] = clusters_plot +
-  ggplot2::labs(title = "Cluster ID") &
-  ggplot2::theme(plot.title = element_text(hjust = 0.5, size = 15))
-
-patchwork::wrap_plots(plot_list, ncol = 4) &
-  Seurat::NoLegend()
-```
-
 ## Cell type
 
 We visualize cell type :
@@ -991,7 +839,6 @@ patchwork::wrap_plots(plot_list, nrow = 2) +
   patchwork::plot_layout(guides = "collect")
 ```
 
-
 We make a representation split by origin to show cell types :
 
 ```{r cell_type_split, fig.width = 14, fig.height = 20}
@@ -1009,6 +856,64 @@ patchwork::wrap_plots(plot_list, ncol = 4) +
   patchwork::plot_layout(guides = "collect") &
   ggplot2::theme(legend.position = "right")
 ```
+
+## Laboratory
+
+We can represent cell type split by laboratory, split by sample of origin :
+
+```{r plot_split_dimred_laboratory, fig.width = 12, fig.height = 4.5}
+plot_list = aquarius::plot_split_dimred(sobj,
+                                        reduction = name2D,
+                                        split_by = "laboratory",
+                                        group_by = "cell_type",
+                                        group_color = color_markers)
+
+plot_list[[length(plot_list) + 1]] = patchwork::guide_area()
+
+patchwork::wrap_plots(plot_list, nrow = 1) +
+  patchwork::plot_layout(guides = "collect") &
+  ggplot2::theme(legend.position = "right")
+```
+
+## Location
+
+We can represent cell type split by location, split by sample of origin :
+
+```{r plot_split_dimred_location, fig.width = 12, fig.height = 4.5}
+plot_list = aquarius::plot_split_dimred(sobj,
+                                        reduction = name2D,
+                                        split_by = "location",
+                                        group_by = "cell_type",
+                                        group_color = color_markers)
+
+plot_list[[length(plot_list) + 1]] = patchwork::guide_area()
+
+patchwork::wrap_plots(plot_list, nrow = 1) +
+  patchwork::plot_layout(guides = "collect") &
+  ggplot2::theme(legend.position = "right")
+```
+
+## Clusters
+
+We can represent clusters, split by sample of origin :
+
+```{r plot_split_dimred_cluster, fig.width = 14, fig.height = 20}
+plot_list = aquarius::plot_split_dimred(sobj,
+                                        reduction = name2D,
+                                        split_by = "project_name",
+                                        group_by = "seurat_clusters",
+                                        split_color = setNames(sample_info$color,
+                                                               nm = sample_info$project_name),
+                                        group_color = aquarius::gg_color_hue(length(levels(sobj$seurat_clusters))))
+
+plot_list[[length(plot_list) + 1]] = clusters_plot +
+  ggplot2::labs(title = "Cluster ID") &
+  ggplot2::theme(plot.title = element_text(hjust = 0.5, size = 15))
+
+patchwork::wrap_plots(plot_list, ncol = 4) &
+  Seurat::NoLegend()
+```
+
 
 ## Cell cycle
 
@@ -1039,7 +944,7 @@ plot_list[[3]] = Seurat::FeaturePlot(sobj, features = "BIRC5",
   ggplot2::theme(aspect.ratio = 1,
                  plot.title = element_text(hjust = 0.5))
 
-# TOP2A
+# TK1
 plot_list[[4]] = Seurat::FeaturePlot(sobj, features = "TOP2A",
                                      reduction = name2D) +
   ggplot2::scale_color_gradientn(colors = aquarius::color_gene) +

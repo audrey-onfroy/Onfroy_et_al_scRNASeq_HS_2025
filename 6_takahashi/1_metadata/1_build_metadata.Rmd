@@ -144,7 +144,23 @@ We processed the Takahashi datasets from the count matrices and not from the FAS
 url_hg38 = "https://ftp.ensembl.org/pub/release-74/gtf/homo_sapiens/Homo_sapiens.GRCh37.74.gtf.gz"
 gene_corresp = aquarius::read_gtf(url_hg38, column_names = c("gene_id", "gene_name"))
 
+dim(gene_corresp)
 head(gene_corresp)
+```
+
+There are issues with some genes. They are not expressed/detected in the cells, but when we subset some cells in the Seurat object, these genes are remplaced by NA, which causes issues in the subsequent analyses. Therefore, we remove these genes.
+
+```{r conversion_df}
+genes_pb = c("RP11-442N24__B.1", "RP11-99J16__A.2", "RP11-59D5__B.2", "RP11-445L13__B.3",
+             "RP11-544L8__B.4", "XXyac-YX65C7_A.2", "XXyac-YX65C7_A.3", "RP11-524D16__A.3",
+             "RP11-453F18__B.1", "Metazoa_SRP", "Y_RNA", "XX-DJ76P10__A.2", "5S_rRNA",
+             "RP11-1157N2__B.2", "RP1-213J1P__B.1", "RP1-213J1P__B.2", "RP4-633O19__A.1",
+             "RP4-754E20__A.5","CTA-280A3__B.2")
+
+gene_corresp = gene_corresp %>%
+  dplyr::filter(!(gene_name %in% genes_pb))
+
+dim(gene_corresp)
 ```
 
 We save it :
