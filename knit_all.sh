@@ -1,10 +1,5 @@
 #!/bin/bash
 
-#SBATCH --account=nf1_scrnaseq
-#SBATCH --job-name=knit
-#SBATCH --cpus-per-task=5
-#SBATCH --mem=50GB
-
 #------------------------ Load module of interest
 #module load singularity
 
@@ -59,40 +54,40 @@ singularity exec ${singularity_container} \
     Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.Rmd',
                                   output_file = '${analysis_dir}/4_zoom/2_zoom_hfsc/1_zoom_hfsc_dataset.html')" &&
 
-#singularity exec ${singularity_container} \
-#    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.Rmd',
-#                                  output_file = '${analysis_dir}/4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html')"
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.Rmd',
+                                  output_file = '${analysis_dir}/4_zoom/2_zoom_hfsc/2_zoom_hfsc_analysis.html')"
 
-# IBL and mORS
-#singularity exec ${singularity_container} \
-#    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/3_zoom_ors_ifeb/1_zoom_ors_ifeb_dataset.Rmd',
-#                                  output_file = '${analysis_dir}/4_zoom/3_zoom_ors_ifeb/1_zoom_ors_ifeb_dataset.html')" &&
+# ORS and IFE basal
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/3_zoom_ors_ifeb/1_zoom_ors_ifeb_dataset.Rmd',
+                                  output_file = '${analysis_dir}/4_zoom/3_zoom_ors_ifeb/1_zoom_ors_ifeb_dataset.html')" &&
 
-#singularity exec ${singularity_container} \
-#    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/3_zoom_ors_ifeb/2_zoom_ors_ifeb_analysis.Rmd',
-#                                  output_file = '${analysis_dir}/4_zoom/3_zoom_ors_ifeboom_hfsc/2_zoom_ors_ifeb_analysis.html')"
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/3_zoom_ors_ifeb/2_zoom_ors_ifeb_analysis.Rmd',
+                                  output_file = '${analysis_dir}/4_zoom/3_zoom_ors_ifeboom_hfsc/2_zoom_ors_ifeb_analysis.html')"
 
 # IFE granular and spinous
-#singularity exec ${singularity_container} \
-#    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/4_zoom_ifegs/1_zoom_ifegs_dataset.Rmd',
-#                                  output_file = '${analysis_dir}/4_zoom/4_zoom_ifegs/1_zoom_ifegs_dataset.html')" &&
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/4_zoom_ifegs/1_zoom_ifegs_dataset.Rmd',
+                                  output_file = '${analysis_dir}/4_zoom/4_zoom_ifegs/1_zoom_ifegs_dataset.html')" &&
 
-#singularity exec ${singularity_container} \
-#    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/4_zoom_ifegs/2_zoom_ifegs_analysis.Rmd',
-#                                  output_file = '${analysis_dir}/4_zoom/4_zoom_ifegs/2_zoom_ifegs_analysis.html')"
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/4_zoom_ifegs/2_zoom_ifegs_analysis.Rmd',
+                                  output_file = '${analysis_dir}/4_zoom/4_zoom_ifegs/2_zoom_ifegs_analysis.html')"
 
 # Trajectory (non matrix)
-#singularity exec ${singularity_container} \
-#    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/5_zoom_non_matrix/1_zoom_non_matrix_dataset.Rmd',
-#                                  output_file = '${analysis_dir}/4_zoom/5_zoom_non_matrix/1_zoom_non_matrix_dataset.html')" &&
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/5_zoom_non_matrix/1_zoom_non_matrix_dataset.Rmd',
+                                  output_file = '${analysis_dir}/4_zoom/5_zoom_non_matrix/1_zoom_non_matrix_dataset.html')" &&
 
-#singularity exec ${singularity_container} \
-#    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/5_zoom_non_matrix/2_trajectory_tinga.Rmd',
-#                                  output_file = '${analysis_dir}/4_zoom/5_zoom_non_matrix/2_trajectory_tinga.html')"
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/5_zoom_non_matrix/2_trajectory_tinga.Rmd',
+                                  output_file = '${analysis_dir}/4_zoom/5_zoom_non_matrix/2_trajectory_tinga.html')"
 
-#singularity exec ${singularity_container} \
-#    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/5_zoom_non_matrix/3_trajectory_slingshot.Rmd',
-#                                  output_file = '${analysis_dir}/4_zoom/5_zoom_non_matrix/3_trajectory_slingshot.html')"
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/4_zoom/5_zoom_non_matrix/3_trajectory_slingshot.Rmd',
+                                  output_file = '${analysis_dir}/4_zoom/5_zoom_non_matrix/3_trajectory_slingshot.html')"
 
 # Matrix cells
 singularity exec ${singularity_container} \
@@ -127,14 +122,14 @@ singularity exec ${singularity_container} \
     Rscript -e "rmarkdown::render(input = '${analysis_dir}/5_wu/3_combined/1_combined_all.Rmd',
                                   output_file = '${analysis_dir}/5_wu/3_combined/1_combined_all.html')"
 
-# IBL and mORS
-#singularity exec ${singularity_container} \
-#    Rscript -e "rmarkdown::render(input = '${analysis_dir}/5_wu/4_ibl_ors/1_zoom_ors_ifeb_dataset.Rmd',
-#                                  output_file = '${analysis_dir}/5_wu/4_ibl_ors/1_zoom_ors_ifeb_dataset.html')" &&
+# ORS and IFE basal
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/5_wu/4_ibl_ors/1_zoom_ors_ifeb_dataset.Rmd',
+                                  output_file = '${analysis_dir}/5_wu/4_ibl_ors/1_zoom_ors_ifeb_dataset.html')" &&
 
-#singularity exec ${singularity_container} \
-#    Rscript -e "rmarkdown::render(input = '${analysis_dir}/5_wu/4_ibl_ors/2_zoom_ors_ifeb_analysis.Rmd',
-#                                  output_file = '${analysis_dir}/5_wu/4_ibl_ors/2_zoom_ors_ifeb_analysis.html')"
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/5_wu/4_ibl_ors/2_zoom_ors_ifeb_analysis.Rmd',
+                                  output_file = '${analysis_dir}/5_wu/4_ibl_ors/2_zoom_ors_ifeb_analysis.html')"
 
 
 #---------- Takahashi data
@@ -160,26 +155,25 @@ singularity exec ${singularity_container} \
     Rscript -e "rmarkdown::render(input = '${analysis_dir}/6_takahashi/3_combined/1_combined_all.Rmd',
                                   output_file = '${analysis_dir}/6_takahashi/3_combined/1_combined_all.html')"
 
-# IBL and mORS
-#singularity exec ${singularity_container} \
-#    Rscript -e "rmarkdown::render(input = '${analysis_dir}/6_takahashi/4_ibl_ors/1_zoom_ors_ifeb_dataset.Rmd',
-#                                  output_file = '${analysis_dir}/6_takahashi/4_ibl_ors/1_zoom_ors_ifeb_dataset.html')" &&
+# ORS and IFE basal
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/6_takahashi/4_ibl_ors/1_zoom_ors_ifeb_dataset.Rmd',
+                                  output_file = '${analysis_dir}/6_takahashi/4_ibl_ors/1_zoom_ors_ifeb_dataset.html')" &&
 
-#singularity exec ${singularity_container} \
-#    Rscript -e "rmarkdown::render(input = '${analysis_dir}/6_takahashi/4_ibl_ors/2_zoom_ors_ifeb_analysis.Rmd',
-#                                  output_file = '${analysis_dir}/6_takahashi/4_ibl_ors/2_zoom_ors_ifeb_analysis.html')"
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/6_takahashi/4_ibl_ors/2_zoom_ors_ifeb_analysis.Rmd',
+                                  output_file = '${analysis_dir}/6_takahashi/4_ibl_ors/2_zoom_ors_ifeb_analysis.html')"
 
 
-#---------- Combined three data (no Singularity container because of the org.Hs.eg.db package which is not inside)
-#Rscript -e "rmarkdown::render(input = '${analysis_dir}/3_combined/2_combined_three_data.Rmd',
-#                              output_file = '${analysis_dir}/3_combined/2_combined_three_data.html')"
-
+#---------- Combined three data
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/3_combined/2_combined_three_data.Rmd',
+                                  output_file = '${analysis_dir}/3_combined/2_combined_three_data.html')"
 
 #---------- Figures
-#singularity exec ${singularity_container} \
-#    Rscript -e "rmarkdown::render(input = '${analysis_dir}/7_figures/figures.Rmd',
-#                                  output_file = '${analysis_dir}/7_figures/figures.html')"
-
+singularity exec ${singularity_container} \
+    Rscript -e "rmarkdown::render(input = '${analysis_dir}/7_figures/figures.Rmd',
+                                  output_file = '${analysis_dir}/7_figures/figures.html')"
 
 #------------------------ Unload module of interest
 #module unload singularity
