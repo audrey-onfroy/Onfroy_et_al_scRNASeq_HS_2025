@@ -99,7 +99,7 @@ library(ComplexHeatmap)
 
 # Preparation
 
-Here are the folders where analyzes are stored :
+Here are the folders where analyses are stored :
 
 ```{r locations}
 data_dir = "./.."
@@ -108,7 +108,7 @@ list.files(data_dir)
 
 These are the custom colors for cell populations :
 
-```{r color_markers, fig.width = 10, fig.height = 1.2, class.source = "fold-hide"}
+```{r color_markers, fig.width = 10, fig.height = 1.2}
 color_markers = readRDS(paste0(data_dir, "/1_metadata/hs_hd_color_markers.rds"))
 color_markers = color_markers[names(color_markers) != "melanocytes"] # remove melanocytes
 
@@ -128,7 +128,7 @@ data.frame(cell_type = names(color_markers),
 
 We define custom colors for sample type :
 
-```{r sample_type_colors, fig.width = 3, fig.height = 0.75, class.source = "fold-hide"}
+```{r sample_type_colors, fig.width = 3, fig.height = 0.75}
 sample_type_colors = setNames(nm = c("HS", "HD"),
                               c("#C55F40", "#2C78E6"))
 
@@ -147,7 +147,7 @@ data.frame(cell_type = names(sample_type_colors),
 
 We define custom colors for laboratory :
 
-```{r laboratory_colors, fig.width = 3, fig.height = 0.75, class.source = "fold-hide"}
+```{r laboratory_colors, fig.width = 3, fig.height = 0.75}
 laboratory_colors = setNames(nm = c("Our", "Wu", "Takahashi"),
                              c("firebrick3", "deepskyblue", "mediumpurple"))
 
@@ -166,7 +166,7 @@ data.frame(cell_type = names(laboratory_colors),
 
 We define custom colors for location :
 
-```{r location_colors, fig.width = 3, fig.height = 0.75, class.source = "fold-hide"}
+```{r location_colors, fig.width = 3, fig.height = 0.75}
 location_colors = setNames(nm = c("axillary", "hair scalp", "pubis"),
                            c("forestgreen", "orchid3", "darkorange1"))
 
@@ -247,36 +247,26 @@ cell_markers = list(
   "B cells" = c("CD79A", "IGHG2", "IGHG3", "IGLC3", "IGHG1", "IGHM", "MS4A1", "IGLC2",
                 "IGHGP", "BANK1", "IGHG4", "IGKC", "TNFRSF13C", "CD79B", "KLF2", "GZMB"),
   # Matrix
-  "cuticle" = c("KRT32", "KIF21A", "CCND2", "VCAN", "CYSTM1", "TESC", "MT4", "KRT35",
-                "DIAPH3", "VSNL1", "NOTCH1", "SNCAIP", "CADM1", "OCA2", "LAMP5"),
-  "cortex" = c("KRTAP11-1", "PRR9", "C10orf99", "CRYAB", "HEPHL1", "ALOX15B", "EFHD1", "KRT35",
-               "CALHM4", "SPECC1", "DSG4", "DNASE1L2", "TGM3", "KRT31", "KRT36", "KIAA1211L"),
-  "medulla" = c("BAMBI", "SLC7A8", "EDNRA", "ALDH1A3", "IGFBP2",
-                "KRT25", "KITLG", "MSX2", "SLC6A15", "PRDM1"),
-  "IRS" = c("KRT71", "KRT27", "KRT28", "KRT25", "CTSC", "GATA3", "KRT72", "KRT73", "KRT74",
-            "SCEL", "GFRA3", "POF1B", "RDH12", "LMO7", "TCHH", "FABP9"),
-  "proliferative" = c("NUSAP1", "PCLAF", "TOP2A", "MKI67", "BIRC5", "CENPF",
-                      "TK1", "TYMS", "MCM5", "GINS2", "MCM5", "PCLAF",
-                      "CDCA7", "MCM3", "TYMS", "CLSPN", "FEN1", "FAM111B", "CDT1"),
+  "cuticle" = c("KRT32", "CYSTM1", "MT4", "KRT35", "VSNL1", "NOTCH1"),
+  "cortex" = c("C10orf99", "CRYAB", "HEPHL1", "ALOX15B", "EFHD1", "DSG4", "DNASE1L2", "TGM3", "KRT31"),
+  "medulla" = c("BAMBI", "SLC7A8", "EDNRA", "IGFBP2", "KRT25", "KITLG"),
+  "IRS" = c("KRT71", "KRT27", "KRT28", "CTSC", "GATA3", "KRT73", "SCEL"),
+  "proliferative" = c("TOP2A", "MKI67", "BIRC5", "TK1", "MCM5"),
   # Non-matrix
-  "HF-SCs" = c("KRT15", "DST", "DIO2", "TCEAL2", "SFRP1", "TNC", "WIF1", "FRZB", "LHX2", "SPRY1",
-               "COL1A2", "ITGA6", "SOX9", "S100A6", "ANGPTL7", "LGR5", "COL17A1"),
-  "IFE basal" = c("GPX2", "IMPA2", "KRT15", "DST", "COL17A1", "MOXD1", "C19orf48", "CHD7",
-                  "ALDH3A1", "AHNAK2", "CDH13", "LAMB3", "CAVIN1", "EHF", "CEBPD", "TP53AIP1"),
-  "IFE granular spinous" = c("GPX2", "IMPA2", "DEFB1", "LY6D", "EHF", "PDZK1IP1", "S100A7", "FGFBP1", "LYPD3",
-                             "CRABP2", "SPINK5", "KRT1", "KRTDAP", "CIDEA", "SUSD4", "FAM83A", "TMEM45A"),
-  "ORS" = c("KRT16", "KRT6B", "KRT6C", "NDUFA4L2", "TM4SF1", "APOC1", "SLC1A6",
-            "CLCA2", "RHOV", "CBLN2", "HES4", "SMCO4", "MGST1", "LYPD3", "MGP"),
+  "HF-SCs" = c("KRT15", "DST", "DIO2", "TCEAL2", "SFRP1", "TNC", "WIF1", "FRZB", "LHX2", "COL17A1"),
+  "IFE basal" = c("GPX2", "MOXD1", "C19orf48", "ALDH3A1", "CDH13", "LAMB3", "CAVIN1"),
+  "IFE granular spinous" = c("DEFB1", "LY6D", "EHF", "PDZK1IP1", "S100A7", "FGFBP1", "SPINK5", "KRT1", "KRTDAP"),
+  "ORS" = c("KRT16", "KRT6B", "KRT6C", "TM4SF1", "APOC1", "CBLN2", "HES4", "LYPD3"),
   # other
   "melanocytes" = c("DCT", "KIT", "MLANA", "GPM6B", "EDNRB", "PMEL", "IGFBP7", "MITF", "ZEB2", "APOD"),
-  "sebocytes" = c("CLMP", "GLDC", "PPARG", "ACSBG1", "MGST1", "SAA1", "AR", "APMAP"))
+  "sebocytes" = c("CLMP", "PPARG", "ACSBG1", "MGST1", "SAA1", "APMAP"))
 
 lengths(cell_markers)
 ```
 
 Custom functions to display gene expression on the heatmap :
 
-```{r color_fun, class.source = "fold-hide"}
+```{r color_fun}
 color_fun = function(one_gene) {
   gene_range = range(ht_annot[, one_gene])
   gene_palette = circlize::colorRamp2(colors = c("#FFFFFF", aquarius::color_gene[-1]),
@@ -702,11 +692,11 @@ plot_list = patchwork::wrap_plots(plot_list, p,
 plot_list
 ```
 
-* barplot with proportion of cells for 4 cell type, by sample ID
+* barplot with proportion of cells for cell types of interest, by sample ID
 
-```{r barplot_atlas, fig.width = 9, fig.height = 5}
+```{r barplot_atlas, fig.width = 7, fig.height = 5}
 # Cells of interest
-cells_oi = c("ORS", "IFE basal", "CD4 T cells", "macrophages")
+cells_oi = c("CD4 T cells", "macrophages")
 
 # Proportion of cells by sample ID
 df_proportion = table(sobj$cluster_type,
@@ -725,7 +715,7 @@ ggplot2::ggplot(df_proportion, aes(x = sample_identifier,
   ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(),
                     color = "black", width = 0.7) +
   ggplot2::labs(y = "% of cells by sample") +
-  ggplot2::scale_y_continuous(expand = c(0, 0)) +
+  ggplot2::scale_y_continuous(expand = c(0, 0), limits = c(0,14)) +
   ggplot2::scale_fill_manual(values = color_markers[cells_oi],
                              breaks = cells_oi,
                              name = "Cell Type") +
@@ -1039,7 +1029,7 @@ plot_list
 
 for non matrix cells
 
-```{r violin_non_matrix_combined, fig.width = 4, fig.height = 4}
+```{r violin_non_matrix_combined, fig.width = 5, fig.height = 10}
 category_of_interest = "non matrix"
 
 # Select cells of interest
@@ -1103,12 +1093,12 @@ patchwork_list = lapply(names(cell_markers_of_interest), FUN = function(cell_typ
 })
 names(patchwork_list) = names(cell_markers_of_interest)
 
-patchwork_list
+patchwork::wrap_plots(patchwork_list, ncol = 1)
 ```
 
 for matrix cells
 
-```{r violin_matrix_combined, fig.width = 4, fig.height = 4}
+```{r violin_matrix_combined, fig.width = 5, fig.height = 11}
 category_of_interest = "matrix"
 
 # Select cells of interest
@@ -1172,7 +1162,7 @@ patchwork_list = lapply(names(cell_markers_of_interest), FUN = function(cell_typ
 })
 names(patchwork_list) = names(cell_markers_of_interest)
 
-patchwork_list
+patchwork::wrap_plots(patchwork_list, ncol = 1)
 ```
 
 ## Non-matrix cells
@@ -2101,21 +2091,6 @@ ComplexHeatmap::draw(ht,
                      heatmap_legend_side = "left",
                      annotation_legend_side = "left")
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # Supplementary tables
 
