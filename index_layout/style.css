@@ -35,7 +35,7 @@ html {
 
 .first-row {
     /* height: 10%; */
-    background-color: #085c0c;
+    background-color: gray;
     color: white;
     padding: 0px 4px 0px 4px;
     /* margin: 0px 15px 0px 10px; */
@@ -169,7 +169,7 @@ button {
 ul,
 li {
     list-style-type: none;
-    color: #085c0c;
+    color: gray;
     font-weight: bold;
 }
 
