@@ -183,6 +183,25 @@ data.frame(cell_type = names(location_colors),
                  axis.text.y = element_blank())
 ```
 
+We define custom colors for gender :
+
+```{r gender_colors, fig.width = 3, fig.height = 0.75}
+gender_colors = setNames(nm = c("F", "M"),
+                           c("lightslateblue", "chartreuse3"))
+
+data.frame(cell_type = names(gender_colors),
+           color = unlist(gender_colors)) %>%
+  ggplot2::ggplot(., aes(x = cell_type, y = 0, fill = cell_type)) +
+  ggplot2::geom_point(pch = 21, size = 5) +
+  ggplot2::scale_fill_manual(values = unlist(gender_colors), breaks = names(gender_colors)) +
+  ggplot2::theme_classic() +
+  ggplot2::theme(legend.position = "none",
+                 axis.line = element_blank(),
+                 axis.title = element_blank(),
+                 axis.ticks = element_blank(),
+                 axis.text.y = element_blank())
+```
+
 We set a background color :
 
 ```{r bg_color}
@@ -937,6 +956,9 @@ cells_coord = sobj@reductions[[name2D]]@cell.embeddings %>%
 cells_coord$sample_identifier = sobj$sample_identifier
 cells_coord$location = sobj$location
 cells_coord$laboratory = sobj$laboratory
+cells_coord$gender = dplyr::left_join(sobj@meta.data,
+                                      sample_info,
+                                      by = "project_name")[, "gender"]
 cells_coord = cells_coord[(rnd_order), ]
 
 # Plot
@@ -968,6 +990,18 @@ ggplot2::ggplot(cells_coord, aes(x = Dim1, y = Dim2, col = laboratory)) +
   ggplot2::geom_point(size = 0.5) +
   ggplot2::scale_color_manual(values = laboratory_colors,
                               breaks = names(laboratory_colors)) +
+  ggplot2::theme_void() +
+  ggplot2::theme(aspect.ratio = 1,
+                 legend.position = "none")
+```
+
+* gender
+
+```{r gender_combined, fig.width = 4, fig.height = 4}
+ggplot2::ggplot(cells_coord, aes(x = Dim1, y = Dim2, col = gender)) +
+  ggplot2::geom_point(size = 0.5) +
+  ggplot2::scale_color_manual(values = gender_colors,
+                              breaks = names(gender_colors)) +
   ggplot2::theme_void() +
   ggplot2::theme(aspect.ratio = 1,
                  legend.position = "none")
@@ -1196,6 +1230,17 @@ Seurat::DimPlot(sobj_atlas, reduction = name2D_atlas, pt.size = 0.000001,
                  plot.title = element_blank()) +
   Seurat::NoAxes() + Seurat::NoLegend()
 ```
+
+* sample type
+
+```{r sample_type_non_matrix_our, fig.width = 4, fig.height = 4}
+Seurat::DimPlot(sobj, reduction = name2D, pt.size = 0.5,
+                group.by = "sample_type", cols = sample_type_colors) +
+  ggplot2::theme(aspect.ratio = 1) +
+  Seurat::NoAxes() +
+  Seurat::NoLegend()
+```
+
 * cell type annotation
 
 ```{r cell_type_non_matrix_our, fig.width = 4, fig.height = 4}
@@ -1957,22 +2002,6 @@ names(plot_list) = features_oi$feature
 
 plot_list
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 * heatmap macrophages
