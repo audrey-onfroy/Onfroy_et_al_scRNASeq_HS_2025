@@ -5,4 +5,3 @@ This repository contains the code to ensure the traceability of the analysis of 
 The results behind this analysis are available on BioRXiv:
 
 > Onfroy *et al.*, Hair follicle stem cell fate supports distinct clinical endotypes in Hidradenitis Suppurativa, bioRxiv 2025.05.28.656362; doi: [10.1101/2025.05.28.656362](https://doi.org/10.1101/2025.05.28.656362)
-> 

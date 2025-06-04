@@ -25,26 +25,26 @@ knitr::opts_chunk$set(echo = TRUE,
 
 This site gathers and describes all scripts used for the analysis of single-cell RNA sequencing (scRNA-Seq), from raw count matrices to figure presented in the publication.
 
-<center>ADD PUBLICATION LINK HERE</center><br><br>
+<br>
+<center>Onfroy *et al.*, Hair follicle stem cell fate supports distinct clinical endotypes in *Hidradenitis Suppurativa*, <br>
+bioRxiv; doi: [10.1101/2025.05.28.656362](https://doi.org/10.1101/2025.05.28.656362)</center>
+<br>
 
-All computational analyses were conducted using R language within RStudio. We used the rmarkdown package to develop R Markdown notebooks in RMD format. Notebooks are organized into two types of sections. The "chunk" section contains code in the R programming language, while the output is displayed below the chunk. Chunks are surrounded by explanatory comments in human readable language.
-
-RMD files were compiled to generate HTML files, which are shared through this site. Section titles are written in bold. The plain text items listed in the contents box on the left are clickable and each one links to one HTML file. Once a file is open, a link in the top left corner enables to open it in a new tab. In the top right corner, the button "Code" allows to download the RMD file behind the HTML.
+All computational analyses were conducted using R language within RStudio. R Markdown (RMD) files were compiled to generate static HTML files, which are shared through this site. Once a file is open, a link in the top left corner enables to open it in a new tab. In the top right corner, the button "Code" allows to download the RMD file behind the HTML.
 
 # Data availability
 
-| Content               |      Availability      | Tables in the publication |
-|:---------------------:|:----------------------:|:---------------------------------------------:|
-| scRNA-Seq data        |  https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE273109 | Information about patients in **Table S1** |
-| R Markdown files      |  https://github.com/audrey-onfroy/scrnaseq_hair_follicles_hidradenitis_suppurativa or directly downloadable in the top right corner of this site | / |
-| Singularity container |  https://zenodo.org/records/13145084 | List of packages in **Table S2** |
-| aquarius package      |  https://github.com/audrey-onfroy/aquarius | / |
+| Content               |      Availability      |
+|:---------------------:|:----------------------:|
+| scRNA-Seq data        |  GEO, accession number [GSE273109](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE273109) |
+| R Markdown files      |  GitHub repository hosting this website |
+| Singularity container |  Zenodo, record ID [15512051](https://doi.org/10.5281/zenodo.15512051) |
 
 One scRNA-Seq dataset corresponds to hair follicles from one human individual, either a HS patient or healthy donor. For each dataset, the following files are accessible at the accession number **GSE273109** in the Gene Expression Omnibus (GEO) repository (link above):
 
 * FASTQ files: four R1 (cell barcode + UMI), four R2 (biological information) and four I1 (sample index). One R1-R2-I1 group of files correspond to one lane in the sequencer. Each sample was sequenced once.
 * `features.tsv.gz`, `barcodes.tsv.gz` and `matrix.mtx.gz`: raw count matrix, output by Cell Ranger software version 3.1.0, using the hg19 reference transcriptome.
-* `sobj_filtered.rds`: Seurat object with cells filtered based on quality metrics. The object format is issued from Seurat package version 3.1.5.
+* `sobj_filtered.rds`: Seurat object with cells filtered based on quality metrics. The object format is issued from *Seurat* package version 3.1.5.
 
 # Data presentation
 
@@ -121,8 +121,9 @@ done
 
 Since R libraries are not located at the same location within the Singularity container or on the local machine, we add the `.libPaths()` R command at the beginning of each notebook. In the compiled HTML file, we thus can easily check if the notebook was compiled through the container or not.
 
-# Re-usability
+# Index page
 
-This website was built using our template available at [https://github.com/audrey-onfroy/organize_html](https://github.com/audrey-onfroy/organize_html).
+The static website was built using OrganizeHTML (DOI: [10.5281/zenodo.14505634](https://doi.org/10.5281/zenodo.14505634))
 
---end--
+
+<center>--end--</center>
